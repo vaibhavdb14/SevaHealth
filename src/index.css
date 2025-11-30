@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 174 100% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 174 100% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 174 100% 15%;
+
+    --primary: 174 100% 23.5%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 122 40% 74%;
+    --secondary-foreground: 174 100% 15%;
+
+    --muted: 174 20% 96%;
+    --muted-foreground: 174 20% 40%;
+
+    --accent: 122 40% 74%;
+    --accent-foreground: 174 100% 15%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 174 20% 90%;
+    --input: 174 20% 90%;
+    --ring: 174 100% 23.5%;
+
+    --radius: 1rem;
+
+    /* Custom SevaHealth tokens */
+    --teal-primary: 174 100% 23.5%;
+    --teal-light: 174 60% 85%;
+    --green-soft: 122 40% 74%;
+    --green-light: 122 40% 92%;
+    
+    /* Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(174 100% 23.5%) 0%, hsl(174 80% 35%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(174 20% 98%) 100%);
+    
+    /* Shadows */
+    --shadow-soft: 0 4px 24px hsl(174 100% 23.5% / 0.12);
+    --shadow-card: 0 2px 12px hsl(174 20% 40% / 0.08);
+    
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    --background: 174 30% 10%;
+    --foreground: 174 20% 95%;
+
+    --card: 174 25% 12%;
+    --card-foreground: 174 20% 95%;
+
+    --popover: 174 25% 12%;
+    --popover-foreground: 174 20% 95%;
+
+    --primary: 174 60% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 122 30% 35%;
+    --secondary-foreground: 174 20% 95%;
+
+    --muted: 174 25% 18%;
+    --muted-foreground: 174 15% 60%;
+
+    --accent: 122 30% 35%;
+    --accent-foreground: 174 20% 95%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 174 25% 20%;
+    --input: 174 25% 20%;
+    --ring: 174 60% 45%;
+
+    /* Dark mode custom tokens */
+    --teal-primary: 174 60% 45%;
+    --teal-light: 174 40% 30%;
+    --green-soft: 122 30% 35%;
+    --green-light: 122 25% 25%;
+    
+    --gradient-hero: linear-gradient(135deg, hsl(174 60% 45%) 0%, hsl(174 50% 30%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(174 30% 10%) 0%, hsl(174 25% 12%) 100%);
+    
+    --shadow-soft: 0 4px 24px hsl(174 100% 10% / 0.3);
+    --shadow-card: 0 2px 12px hsl(174 100% 5% / 0.2);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold;
+  }
+}
+
+@layer utilities {
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+  
+  .gradient-subtle {
+    background: var(--gradient-subtle);
+  }
+  
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+  
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+}
