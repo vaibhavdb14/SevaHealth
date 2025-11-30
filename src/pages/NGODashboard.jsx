@@ -272,7 +272,6 @@ const NGODashboard = () => {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <img src="/src/assets/logo.png" alt="SevaHealth" className="h-10" />
-            <span className="font-semibold text-xl">SevaHealth</span>
           </div>
 
           <div className="flex items-center gap-4">

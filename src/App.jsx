@@ -15,7 +15,7 @@ import NGODashboard from "./pages/NGODashboard";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 //chatbot 
-// import ChatbotWidget from "@/components/ChatbotWidget";
+import ChatbotWidget from "@/components/ChatbotWidget";
 
 const queryClient = new QueryClient();
 
@@ -38,10 +38,11 @@ const App = () => (
             <Route path="/contact" element={<Contact />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </LanguageProvider>
-  </QueryClientProvider>
+        <ChatbotWidget/>
+      </BrowserRouter>
+    </TooltipProvider>
+  </LanguageProvider>
+  </QueryClientProvider >
 );
 
 export default App;
