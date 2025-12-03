@@ -18,6 +18,7 @@ import {
   Edit,
   Building2,
   Trash2,
+  FileText
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -36,12 +37,15 @@ import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore"; // ➤ A
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { onSnapshot } from "firebase/firestore";
 import { serverTimestamp } from "firebase/firestore";
+import RequiredDocumentsModal from '../components/RequiredDocumentsModal';
 
 const DoctorDashboard = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [doctorData, setDoctorData] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState('doctor');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -283,6 +287,16 @@ const DoctorDashboard = () => {
 
                 {/* ➤ EDIT + DELETE BUTTONS */}
                 <div className="flex gap-2">
+                  {/* --- NEW: Documents Checklist Button --- */}
+                  <Button
+                    // Replicate the styling from the Edit Profile button
+                    className="rounded-full"
+                    onClick={() => setIsModalOpen(true)} // <-- This opens the modal (ensure setIsModalOpen state is defined)
+                  >
+                    {/* Using a Lucide icon for consistency, like 'ScrollText' or 'FileText' */}
+                    <FileText className="w-4 h-4 mr-2" /> Documents Checklist
+                  </Button>
+
                   <Button className="rounded-full" onClick={handleEditOpen}>
                     <Edit className="w-4 h-4 mr-2" />
                     Edit Profile
@@ -527,6 +541,11 @@ const DoctorDashboard = () => {
               ))
             )}
           </TabsContent>
+          <RequiredDocumentsModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            role="doctor"
+          />
         </Tabs>
       </div>
 

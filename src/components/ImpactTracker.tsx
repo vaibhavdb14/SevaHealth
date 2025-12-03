@@ -19,7 +19,7 @@ const ImpactTracker = () => {
     stats.forEach((stat, index) => {
       let current = 0;
       const increment = stat.target / steps;
-      
+
       const timer = setInterval(() => {
         current += increment;
         if (current >= stat.target) {
@@ -38,6 +38,7 @@ const ImpactTracker = () => {
   return (
     <section className="py-20 gradient-hero">
       <div className="container mx-auto px-4">
+        
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
             Our Growing Impact
@@ -50,15 +51,19 @@ const ImpactTracker = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-6xl mx-auto">
           {stats.map((stat, index) => (
             <div key={index} className="text-center">
+              
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20">
                 <stat.icon className="w-8 h-8 text-white" />
               </div>
+
               <div className="text-4xl md:text-5xl font-bold text-white mb-2">
                 {counts[index]}{stat.suffix}
               </div>
+
               <div className="text-sm md:text-base text-white/80 font-medium">
                 {stat.label}
               </div>
+
             </div>
           ))}
         </div>

@@ -20,6 +20,7 @@ import {
   Building2,
   Trash2,
   Edit,
+  FileText
 } from "lucide-react";
 
 import {
@@ -46,8 +47,12 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { deleteUser, onAuthStateChanged } from "firebase/auth";
+import RequiredDocumentsModal from '../components/RequiredDocumentsModal';
 
 const PatientDashboard = () => {
+
+  const [activeTab, setActiveTab] = useState('patient'); // (If you already have this, skip it)
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
 
   // UI
@@ -444,6 +449,16 @@ const PatientDashboard = () => {
               </div>
 
               <div className="flex gap-2">
+                {/* --- NEW: Documents Checklist Button --- */}
+                <Button
+                  // Replicate the styling from the Edit Profile button
+                  className="rounded-full"
+                  onClick={() => setIsModalOpen(true)} // <-- This opens the modal (ensure setIsModalOpen state is defined)
+                >
+                  {/* Using a Lucide icon for consistency, like 'ScrollText' or 'FileText' */}
+                  <FileText className="w-4 h-4 mr-2" /> Documents Checklist
+                </Button>
+
                 <Button
                   className="rounded-full"
                   onClick={() => setIsEditing(true)}
@@ -459,6 +474,8 @@ const PatientDashboard = () => {
                 >
                   <Trash2 />
                 </Button>
+
+
               </div>
             </CardHeader>
 
@@ -775,8 +792,8 @@ const PatientDashboard = () => {
                             req.status === "accepted"
                               ? "text-emerald-600"
                               : req.status === "declined"
-                              ? "text-red-600"
-                              : "text-yellow-600"
+                                ? "text-red-600"
+                                : "text-yellow-600"
                           }
                         >
                           {req.status}
@@ -820,6 +837,11 @@ const PatientDashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
+          <RequiredDocumentsModal
+              isOpen={isModalOpen}
+              onClose={() => setIsModalOpen(false)}
+              role="patient"
+            />
         </Tabs>
       </div>
 

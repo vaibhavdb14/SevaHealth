@@ -21,6 +21,7 @@ import {
   BarChart3,
   MessageSquare,
   Users,
+  FileText
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
@@ -48,6 +49,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
+import RequiredDocumentsModal from '../components/RequiredDocumentsModal';
+
+
 /**
  * NGODashboard
  *
@@ -68,6 +72,8 @@ const NGODashboard = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState('ngo');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     ngoName: "",
@@ -311,6 +317,16 @@ const NGODashboard = () => {
                 </div>
 
                 <div className="flex gap-2">
+                  {/* --- NEW: Documents Checklist Button --- */}
+                  <Button
+                    // Replicate the styling from the Edit Profile button
+                    className="rounded-full"
+                    onClick={() => setIsModalOpen(true)} // <-- This opens the modal (ensure setIsModalOpen state is defined)
+                  >
+                    {/* Using a Lucide icon for consistency, like 'ScrollText' or 'FileText' */}
+                    <FileText className="w-4 h-4 mr-2" /> Documents Checklist
+                  </Button>
+
                   <Button className="rounded-full" onClick={() => setIsEditing(true)}>
                     <Edit className="mr-2" /> Edit Profile
                   </Button>
@@ -509,7 +525,7 @@ const NGODashboard = () => {
                   <p className="text-muted-foreground">No requests yet.</p>
                 ) : (
                   requests
-                    .sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
+                    .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
                     .map((r) => (
                       <div key={r.id} className="flex justify-between p-4 border rounded-lg mb-3 items-center">
                         <div className="flex gap-4 items-center">
@@ -547,7 +563,7 @@ const NGODashboard = () => {
                   <p className="text-muted-foreground">No accepted conversations yet.</p>
                 ) : (
                   acceptedConvos
-                    .sort((a,b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0))
+                    .sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0))
                     .map((c) => (
                       <div key={c.id} className="flex gap-4 p-3 border rounded-lg mb-3 justify-between items-center">
                         <div className="flex gap-4 items-center">
@@ -566,6 +582,11 @@ const NGODashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
+          <RequiredDocumentsModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            role="ngo"
+          />
         </Tabs>
       </div>
 

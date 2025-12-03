@@ -59,6 +59,7 @@ const HowItWorks = () => {
   return (
     <section className="py-24 bg-gradient-to-b from-emerald-50/50 to-white">
       <div className="container mx-auto px-4">
+        
         {/* Header */}
         <div className="text-center mb-16 space-y-4">
           <h2 className="text-4xl md:text-5xl font-extrabold text-emerald-900 tracking-tight">
@@ -76,7 +77,8 @@ const HowItWorks = () => {
 
             return (
               <div key={index} className="relative group">
-                {/* Connector Line for larger screens */}
+                
+                {/* Connector Line (Desktop Only) */}
                 {index !== t.howItWorks.steps.length - 1 && (
                   <div className="hidden lg:block absolute top-12 right-[-40px] w-20 h-[2px] bg-emerald-300 group-hover:bg-emerald-500 transition-colors"></div>
                 )}
@@ -85,6 +87,7 @@ const HowItWorks = () => {
                   className="p-6 h-full text-center rounded-2xl bg-white/70 backdrop-blur shadow-md border border-emerald-100
                   hover:shadow-xl hover:-translate-y-2 transition-all duration-300"
                 >
+                  
                   {/* Icon */}
                   <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-emerald-100 flex items-center justify-center 
                     animate-pulse-slow group-hover:scale-110 transition-transform">
@@ -99,6 +102,7 @@ const HowItWorks = () => {
                   <h3 className="text-xl font-semibold text-emerald-900 mb-2">
                     {step.title}
                   </h3>
+
                   <p className="text-sm text-emerald-700 leading-relaxed">
                     {step.description}
                   </p>

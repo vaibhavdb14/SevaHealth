@@ -355,9 +355,9 @@ import { db } from "../firebaseConfig";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 
 const backgroundImages = [
-  "/src/assets/img1.jpg",
-  "/src/assets/img1.jpg",
-  "/src/assets/img3.jpg",
+  "/src/assets/image1.png",
+  "/src/assets/image2.png",
+  "/src/assets/image3.png",
 ];
 
 const Index = () => {
@@ -425,7 +425,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 left-0 right-0 z-50 bg-gradient-to-r from-emerald-800 to-emerald-600 shadow-lg border-b border-emerald-900/30">
+      <header className="sticky top-0 left-0 right-0 z-50 bg-gradient-to-r from-teal-800 to-teal-600 shadow-lg border-b border-teal-900/30">
         <div className="container mx-auto px-6 py-3 flex justify-between items-center">
           {/* LOGO */}
           <div className="flex items-center gap-3">
@@ -476,6 +476,44 @@ const Index = () => {
           A unified healthcare seva network connecting doctors, NGOs & patients.
         </p>
       </section>
+
+      {/* <section className="py-16 bg-gray-50">
+        <div className="container mx-auto px-6 text-center">
+            
+            <h2 className="text-3xl md:text-4xl font-bold text-teal-800 mb-4">
+                Healthcare Schemes & Financial Aid
+            </h2>
+            <p className="text-xl text-gray-600 mb-10">
+                Discover government and private programs available through our network of providers.
+            </p>
+
+            {/* Grid of Scheme Cards 
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                
+                {/* Scheme Card 1: Government/State 
+                <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow border-t-4 border-emerald-500">
+                    <h3 className="text-2xl font-semibold text-emerald-600 mb-3">Ayushman Bharat</h3>
+                    <p className="text-gray-600 mb-4">India's largest health insurance scheme offering coverage for low-income families.</p>
+                    <a href="/schemes/ayushman" className="text-teal-600 font-medium hover:underline">View Details</a>
+                </div>
+
+                {/* Scheme Card 2: NGO/Private 
+                <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow border-t-4 border-teal-500">
+                    <h3 className="text-2xl font-semibold text-teal-600 mb-3">Seva NGO Fund</h3>
+                    <p className="text-gray-600 mb-4">Financial assistance provided by partner NGOs for critical care services.</p>
+                    <a href="/schemes/ngofund" className="text-teal-600 font-medium hover:underline">View Details</a>
+                </div>
+
+                {/* Scheme Card 3: Hospital/Doctor Initiative 
+                <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow border-t-4 border-cyan-500">
+                    <h3 className="text-2xl font-semibold text-cyan-600 mb-3">Senior Citizen Discount</h3>
+                    <p className="text-gray-600 mb-4">Special discounts on OPD fees offered by participating SevaHealth doctors.</p>
+                    <a href="/schemes/seniors" className="text-teal-600 font-medium hover:underline">View Details</a>
+                </div>
+            </div>
+
+        </div>
+    </section> */}
 
       {/* ROLE BUTTONS (unchanged except styling) */}
       <section className="py-16 bg-background">

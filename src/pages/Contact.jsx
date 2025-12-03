@@ -30,7 +30,6 @@ const Contact = () => {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
             <img src="/src/assets/logo.png" alt="SevaHealth" className="h-10" />
-            <span className="font-semibold text-xl">SevaHealth</span>
           </div>
           <Button onClick={() => navigate("/")} className="rounded-full">
             Back to Home

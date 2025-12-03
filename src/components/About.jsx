@@ -60,6 +60,7 @@ const About = () => {
         {/* Light Illustration Banner Under Text */}
         <div className="mt-12 flex justify-center">
           <img
+            // src="/src/assets/about.png"
             src="https://media.gettyimages.com/id/1435661952/photo/children-holding-a-planet-outdoors.jpg?s=612x612&w=0&k=20&c=IUjXFGVT3eIx8FbdI3Z-VpHCtHHzFqzhQ72HqLg74xs="
             alt="About SevaHealth"
             className="w-full max-w-4xl rounded-2xl shadow-lg border border-emerald-200"
