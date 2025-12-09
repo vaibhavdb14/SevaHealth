@@ -14,6 +14,7 @@ import {
   Bell,
   LogOut,
   Search,
+  Upload,
   MessageSquare,
   Edit,
   Building2,
@@ -312,9 +313,12 @@ const DoctorDashboard = () => {
 
       <div className="container mx-auto px-4 py-8">
         <Tabs defaultValue="profile" className="space-y-8">
-          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-4 rounded-full">
+          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-5 rounded-full">
             <TabsTrigger value="profile" className="rounded-full">
               Profile
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="rounded-full">
+              My Reports
             </TabsTrigger>
             <TabsTrigger value="ngos" className="rounded-full">
               Connect with NGOs
@@ -467,6 +471,27 @@ const DoctorDashboard = () => {
             </div>
           </TabsContent>
 
+          {/* Reports */}
+          <TabsContent value="reports" className="space-y-6">
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle>Upload Document</CardTitle>
+                <CardDescription>Share your documents</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div
+                  className="border-2 border-dashed border-primary/30 rounded-xl p-12 text-center hover:bg-primary/5 cursor-pointer"
+                  onClick={() => document.getElementById("fileInput").click()}
+                >
+                  <input type="file" id="fileInput" className="hidden" />
+                  <Upload className="w-12 h-12 mx-auto text-primary mb-4" />
+                  <h3 className="font-semibold mb-2">Upload Report</h3>
+                  <p className="text-sm text-muted-foreground">PDF, JPG, PNG</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* NGOs */}
           <TabsContent value="ngos" className="space-y-6">
             <div className="flex flex-col gap-4">
@@ -616,8 +641,8 @@ const DoctorDashboard = () => {
                               chat.status === "accepted"
                                 ? "text-green-600"
                                 : chat.status === "declined"
-                                ? "text-red-600"
-                                : "text-yellow-600"
+                                  ? "text-red-600"
+                                  : "text-yellow-600"
                             }
                           >
                             {chat.status}
@@ -766,6 +791,9 @@ const DoctorDashboard = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+
+      {/*  Doctor -> patient acceptance Modal */}
 
       <Dialog open={isConsultModalOpen} onOpenChange={setIsConsultModalOpen}>
         <DialogContent className="max-w-lg">
