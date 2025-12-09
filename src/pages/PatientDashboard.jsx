@@ -51,7 +51,7 @@ import RequiredDocumentsModal from '../components/RequiredDocumentsModal';
 
 const PatientDashboard = () => {
 
-  const [activeTab, setActiveTab] = useState('patient'); // (If you already have this, skip it)
+  const [activeTab, setActiveTab] = useState('patient'); 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
 
