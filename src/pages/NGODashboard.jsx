@@ -37,6 +37,7 @@ import {
   where,
   onSnapshot,
   serverTimestamp,
+  addDoc,
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
@@ -83,7 +84,8 @@ const NGODashboard = () => {
   // Doctors list (dynamic from users collection)
   const [doctors, setDoctors] = useState([]);
   const [doctorLocationFilter, setDoctorLocationFilter] = useState("");
-  const [doctorSpecializationFilter, setDoctorSpecializationFilter] = useState("");
+  const [doctorSpecializationFilter, setDoctorSpecializationFilter] =
+    useState("");
 
   // NGOConsultations: requests (live subscription)
   const [requests, setRequests] = useState([]); // all requests for this NGO (pending/accepted/declined)
@@ -95,6 +97,7 @@ const NGODashboard = () => {
 
   // Messages tab shows accepted conversations
   const [acceptedConvos, setAcceptedConvos] = useState([]);
+  const [doctorChats, setDoctorChats] = useState([]);
   const [viewConvo, setViewConvo] = useState(null);
   const [isViewConvoOpen, setIsViewConvoOpen] = useState(false);
 
@@ -181,8 +184,12 @@ const NGODashboard = () => {
   }, []);
 
   // Helper: unique location & specialization lists for filters
-  const doctorLocations = Array.from(new Set(doctors.map((d) => d.city || "").filter(Boolean)));
-  const doctorSpecializations = Array.from(new Set(doctors.map((d) => d.specialization || "").filter(Boolean)));
+  const doctorLocations = Array.from(
+    new Set(doctors.map((d) => d.city || "").filter(Boolean))
+  );
+  const doctorSpecializations = Array.from(
+    new Set(doctors.map((d) => d.specialization || "").filter(Boolean))
+  );
 
   // ---------------- SUBSCRIBE TO NGOConsultations (live) ----------------
   useEffect(() => {
@@ -190,15 +197,44 @@ const NGODashboard = () => {
     if (!user) return;
 
     // Build query for NGOConsultations where ngoId is current user
-    const q = query(collection(db, "NGOConsultations"), where("ngoId", "==", user.uid));
+    const q = query(
+      collection(db, "NGOConsultations"),
+      where("ngoId", "==", user.uid)
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        // Keep both full list and accepted list for messages tab
+        setRequests(list);
+        setAcceptedConvos(list.filter((r) => r.status === "accepted"));
+      },
+      (err) => {
+        console.error("NGOConsultations onSnapshot error:", err);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  // ---------------- SUBSCRIBE TO docNGoChat (Doctor ↔ NGO messages) ----------------
+  useEffect(() => {
+    const user = getAuth().currentUser;
+    if (!user) return;
+
+    const q = query(
+      collection(db, "docNGoChat"),
+      where("ngoId", "==", user.uid)
+    );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-      // Keep both full list and accepted list for messages tab
-      setRequests(list);
-      setAcceptedConvos(list.filter((r) => r.status === "accepted"));
-    }, (err) => {
-      console.error("NGOConsultations onSnapshot error:", err);
+      const list = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+      // Only show accepted doctor requests
+      const accepted = list.filter((item) => item.status === "accepted");
+
+      setDoctorChats(accepted);
     });
 
     return () => unsubscribe();
@@ -264,6 +300,50 @@ const NGODashboard = () => {
     </div>
   );
 
+  // --------------- NGO DOCTOR Chat ----------------
+  const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [isDoctorModalOpen, setIsDoctorModalOpen] = useState(false);
+
+  const [chatMode, setChatMode] = useState("online");
+  const [chatDescription, setChatDescription] = useState("");
+  const [chatDate, setChatDate] = useState("");
+  const [chatTime, setChatTime] = useState("");
+  const [chatPlace, setChatPlace] = useState("");
+
+  const sendDoctorChatRequest = async () => {
+    if (!chatDescription.trim()) return alert("Description required");
+
+    const user = getAuth().currentUser;
+    if (!user || !selectedDoctor) return;
+
+    try {
+      await addDoc(collection(db, "docNGoChat"), {
+        ngoId: user.uid,
+        ngoName: ngoData?.ngoName || "",
+        doctorId: selectedDoctor.uid,
+        doctorName: selectedDoctor.name || "",
+
+        messageType: chatMode,
+        description: chatDescription,
+        date: chatDate,
+        time: chatTime,
+        place: chatMode === "offline" ? chatPlace : null,
+
+        status: "pending",
+        doctorNote: null,
+
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      alert("Request sent to doctor!");
+      setIsDoctorModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to send request");
+    }
+  };
+
   // ---------------- RENDER ----------------
   return (
     <div className="min-h-screen bg-background">
@@ -284,7 +364,12 @@ const NGODashboard = () => {
               <AvatarFallback>{(ngoData?.ngoName || "NG")[0]}</AvatarFallback>
             </Avatar>
 
-            <Button variant="ghost" size="icon" className="rounded-full" onClick={() => navigate("/")}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full"
+              onClick={() => navigate("/")}
+            >
               <LogOut />
             </Button>
           </div>
@@ -312,11 +397,19 @@ const NGODashboard = () => {
                 </div>
 
                 <div className="flex gap-2">
-                  <Button className="rounded-full" onClick={() => setIsEditing(true)}>
+                  <Button
+                    className="rounded-full"
+                    onClick={() => setIsEditing(true)}
+                  >
                     <Edit className="mr-2" /> Edit Profile
                   </Button>
 
-                  <Button variant="destructive" size="icon" className="rounded-full" onClick={() => setConfirmDelete(true)}>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="rounded-full"
+                    onClick={() => setConfirmDelete(true)}
+                  >
                     <Trash2 />
                   </Button>
                 </div>
@@ -330,12 +423,20 @@ const NGODashboard = () => {
                       <Info label="Phone" value={ngoData.phone} />
                       <Info label="Location" value={ngoData.location} />
                       <Info label="Area of Work" value={ngoData.areaOfWork} />
-                      <Info label="Contact Person" value={ngoData.contactPerson} />
-                      <Info label="Registration No" value={ngoData.registrationNo} />
+                      <Info
+                        label="Contact Person"
+                        value={ngoData.contactPerson}
+                      />
+                      <Info
+                        label="Registration No"
+                        value={ngoData.registrationNo}
+                      />
                     </div>
 
                     <div>
-                      <p className="text-sm text-muted-foreground">Description</p>
+                      <p className="text-sm text-muted-foreground">
+                        Description
+                      </p>
                       <p>{ngoData.description}</p>
                     </div>
                   </>
@@ -354,38 +455,77 @@ const NGODashboard = () => {
               </DialogHeader>
 
               <div className="grid grid-cols-2 gap-4 mt-4">
-                <Input placeholder="NGO Name" value={formData.ngoName}
-                  onChange={(e) => setFormData({ ...formData, ngoName: e.target.value })} />
+                <Input
+                  placeholder="NGO Name"
+                  value={formData.ngoName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, ngoName: e.target.value })
+                  }
+                />
 
-                <Input placeholder="Email" value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                <Input
+                  placeholder="Email"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                />
 
-                <Input placeholder="Phone" value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                <Input
+                  placeholder="Phone"
+                  value={formData.phone}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone: e.target.value })
+                  }
+                />
 
-                <Input placeholder="Location" value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })} />
+                <Input
+                  placeholder="Location"
+                  value={formData.location}
+                  onChange={(e) =>
+                    setFormData({ ...formData, location: e.target.value })
+                  }
+                />
 
-                <Input placeholder="Area of Work" value={formData.areaOfWork}
-                  onChange={(e) => setFormData({ ...formData, areaOfWork: e.target.value })} />
+                <Input
+                  placeholder="Area of Work"
+                  value={formData.areaOfWork}
+                  onChange={(e) =>
+                    setFormData({ ...formData, areaOfWork: e.target.value })
+                  }
+                />
 
-                <Input placeholder="Contact Person" value={formData.contactPerson}
-                  onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })} />
+                <Input
+                  placeholder="Contact Person"
+                  value={formData.contactPerson}
+                  onChange={(e) =>
+                    setFormData({ ...formData, contactPerson: e.target.value })
+                  }
+                />
 
-                <Input placeholder="Registration No" value={formData.registrationNo}
-                  onChange={(e) => setFormData({ ...formData, registrationNo: e.target.value })} />
+                <Input
+                  placeholder="Registration No"
+                  value={formData.registrationNo}
+                  onChange={(e) =>
+                    setFormData({ ...formData, registrationNo: e.target.value })
+                  }
+                />
 
                 <textarea
                   rows={4}
                   className="border rounded-md p-2 col-span-2"
                   placeholder="Description"
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
                 />
               </div>
 
               <DialogFooter>
-                <Button className="rounded-full" onClick={handleSaveChanges}>Save Changes</Button>
+                <Button className="rounded-full" onClick={handleSaveChanges}>
+                  Save Changes
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -398,11 +538,19 @@ const NGODashboard = () => {
                 <p>This action cannot be undone. All data will be removed.</p>
 
                 <div className="flex justify-center gap-3">
-                  <Button variant="secondary" className="rounded-full" onClick={() => setConfirmDelete(false)}>
+                  <Button
+                    variant="secondary"
+                    className="rounded-full"
+                    onClick={() => setConfirmDelete(false)}
+                  >
                     Cancel
                   </Button>
 
-                  <Button variant="destructive" className="rounded-full" onClick={handleDelete}>
+                  <Button
+                    variant="destructive"
+                    className="rounded-full"
+                    onClick={handleDelete}
+                  >
                     Yes, Delete
                   </Button>
                 </div>
@@ -420,7 +568,9 @@ const NGODashboard = () => {
                   </div>
                   <div>
                     <p className="text-3xl font-bold text-primary">1,245</p>
-                    <p className="text-sm text-muted-foreground">Total Patients Served</p>
+                    <p className="text-sm text-muted-foreground">
+                      Total Patients Served
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -432,7 +582,9 @@ const NGODashboard = () => {
                   </div>
                   <div>
                     <p className="text-3xl font-bold text-primary">87</p>
-                    <p className="text-sm text-muted-foreground">Ongoing Cases</p>
+                    <p className="text-sm text-muted-foreground">
+                      Ongoing Cases
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -444,7 +596,9 @@ const NGODashboard = () => {
                   </div>
                   <div>
                     <p className="text-3xl font-bold text-primary">34</p>
-                    <p className="text-sm text-muted-foreground">Doctor Collaborations</p>
+                    <p className="text-sm text-muted-foreground">
+                      Doctor Collaborations
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -456,44 +610,99 @@ const NGODashboard = () => {
             <div className="flex gap-3 items-center">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
-                <Input placeholder="Search doctors..." className="pl-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                <Input
+                  placeholder="Search doctors..."
+                  className="pl-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
 
-              <select value={doctorLocationFilter} onChange={(e) => setDoctorLocationFilter(e.target.value)} className="border rounded p-2">
+              <select
+                value={doctorLocationFilter}
+                onChange={(e) => setDoctorLocationFilter(e.target.value)}
+                className="border rounded p-2"
+              >
                 <option value="">All Locations</option>
-                {doctorLocations.map((loc) => <option key={loc} value={loc}>{loc}</option>)}
+                {doctorLocations.map((loc) => (
+                  <option key={loc} value={loc}>
+                    {loc}
+                  </option>
+                ))}
               </select>
 
-              <select value={doctorSpecializationFilter} onChange={(e) => setDoctorSpecializationFilter(e.target.value)} className="border rounded p-2">
+              <select
+                value={doctorSpecializationFilter}
+                onChange={(e) => setDoctorSpecializationFilter(e.target.value)}
+                className="border rounded p-2"
+              >
                 <option value="">All Specializations</option>
-                {doctorSpecializations.map((s) => <option key={s} value={s}>{s}</option>)}
+                {doctorSpecializations.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
               </select>
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {doctors
-                .filter((d) =>
-                  (d.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  (d.specialization || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  (d.city || "").toLowerCase().includes(searchQuery.toLowerCase())
+                .filter(
+                  (d) =>
+                    (d.name || "")
+                      .toLowerCase()
+                      .includes(searchQuery.toLowerCase()) ||
+                    (d.specialization || "")
+                      .toLowerCase()
+                      .includes(searchQuery.toLowerCase()) ||
+                    (d.city || "")
+                      .toLowerCase()
+                      .includes(searchQuery.toLowerCase())
                 )
-                .filter((d) => (doctorLocationFilter ? (d.city === doctorLocationFilter) : true))
-                .filter((d) => (doctorSpecializationFilter ? (d.specialization === doctorSpecializationFilter) : true))
+                .filter((d) =>
+                  doctorLocationFilter ? d.city === doctorLocationFilter : true
+                )
+                .filter((d) =>
+                  doctorSpecializationFilter
+                    ? d.specialization === doctorSpecializationFilter
+                    : true
+                )
                 .map((docItem) => (
-                  <Card key={docItem.uid} className="shadow hover:shadow-lg transition">
+                  <Card
+                    key={docItem.uid}
+                    className="shadow hover:shadow-lg transition"
+                  >
                     <CardHeader className="text-center">
-                      <Avatar className="mx-auto"><AvatarFallback><UserCircle /></AvatarFallback></Avatar>
+                      <Avatar className="mx-auto">
+                        <AvatarFallback>
+                          <UserCircle />
+                        </AvatarFallback>
+                      </Avatar>
                       <CardTitle>{docItem.name}</CardTitle>
-                      <CardDescription>{docItem.specialization}</CardDescription>
+                      <CardDescription>
+                        {docItem.specialization}
+                      </CardDescription>
                     </CardHeader>
 
                     <CardContent className="space-y-3 text-center">
                       <p className="text-muted-foreground">{docItem.city}</p>
-                      <Button className="rounded-full w-full">Connect</Button>
+                      <Button
+                        className="rounded-full w-full"
+                        onClick={() => {
+                          setSelectedDoctor(docItem);
+                          setChatDescription("");
+                          setChatDate("");
+                          setChatTime("");
+                          setChatPlace("");
+                          setChatMode("online");
+                          setIsDoctorModalOpen(true);
+                        }}
+                      >
+                        Connect
+                      </Button>
                     </CardContent>
                   </Card>
-                ))
-              }
+                ))}
             </div>
           </TabsContent>
 
@@ -502,7 +711,9 @@ const NGODashboard = () => {
             <Card className="shadow-card">
               <CardHeader>
                 <CardTitle>Patient Requests</CardTitle>
-                <CardDescription>Requests sent by patients to your NGO</CardDescription>
+                <CardDescription>
+                  Requests sent by patients to your NGO
+                </CardDescription>
               </CardHeader>
 
               <CardContent>
@@ -510,14 +721,29 @@ const NGODashboard = () => {
                   <p className="text-muted-foreground">No requests yet.</p>
                 ) : (
                   requests
-                    .sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
+                    .sort(
+                      (a, b) =>
+                        (b.createdAt?.seconds || 0) -
+                        (a.createdAt?.seconds || 0)
+                    )
                     .map((r) => (
-                      <div key={r.id} className="flex justify-between p-4 border rounded-lg mb-3 items-center">
+                      <div
+                        key={r.id}
+                        className="flex justify-between p-4 border rounded-lg mb-3 items-center"
+                      >
                         <div className="flex gap-4 items-center">
-                          <Avatar><AvatarFallback>{(r.patientName || r.patientEmail || "P")[0]}</AvatarFallback></Avatar>
+                          <Avatar>
+                            <AvatarFallback>
+                              {(r.patientName || r.patientEmail || "P")[0]}
+                            </AvatarFallback>
+                          </Avatar>
                           <div>
-                            <p className="font-bold">{r.patientName || r.patientEmail}</p>
-                            <p className="text-sm text-muted-foreground">{r.description}</p>
+                            <p className="font-bold">
+                              {r.patientName || r.patientEmail}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {r.description}
+                            </p>
                           </div>
                         </div>
 
@@ -526,7 +752,13 @@ const NGODashboard = () => {
                             {r.status}
                           </div>
 
-                          <Button size="sm" className="rounded-full" onClick={() => openRequest(r)}>View</Button>
+                          <Button
+                            size="sm"
+                            className="rounded-full"
+                            onClick={() => openRequest(r)}
+                          >
+                            View
+                          </Button>
                         </div>
                       </div>
                     ))
@@ -540,26 +772,50 @@ const NGODashboard = () => {
             <Card className="shadow-card">
               <CardHeader>
                 <CardTitle>Messages (Accepted Requests)</CardTitle>
-                <CardDescription>Accepted requests — view details</CardDescription>
+                <CardDescription>
+                  Accepted requests — view details
+                </CardDescription>
               </CardHeader>
 
               <CardContent>
-                {acceptedConvos.length === 0 ? (
-                  <p className="text-muted-foreground">No accepted conversations yet.</p>
+                {doctorChats.length === 0 ? (
+                  <p className="text-muted-foreground">
+                    No doctor conversations yet.
+                  </p>
                 ) : (
-                  acceptedConvos
-                    .sort((a,b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0))
+                  doctorChats
+                    .sort(
+                      (a, b) =>
+                        (b.updatedAt?.seconds || 0) -
+                        (a.updatedAt?.seconds || 0)
+                    )
                     .map((c) => (
-                      <div key={c.id} className="flex gap-4 p-3 border rounded-lg mb-3 justify-between items-center">
+                      <div
+                        key={c.id}
+                        className="flex gap-4 p-3 border rounded-lg mb-3 justify-between items-center"
+                      >
                         <div className="flex gap-4 items-center">
-                          <Avatar><AvatarFallback>{(c.patientName || c.patientEmail || "P")[0]}</AvatarFallback></Avatar>
+                          <Avatar>
+                            <AvatarFallback>
+                              {(c.doctorName || "D")[0]}
+                            </AvatarFallback>
+                          </Avatar>
                           <div>
-                            <p className="font-bold">{c.patientName || c.patientEmail}</p>
-                            <p className="text-muted-foreground text-sm">{c.description}</p>
+                            <p className="font-bold">{c.doctorName}</p>
+                            <p className="text-muted-foreground text-sm">
+                              {c.description}
+                            </p>
                           </div>
                         </div>
+
                         <div className="flex gap-2">
-                          <Button size="sm" className="rounded-full" onClick={() => openConvo(c)}>View</Button>
+                          <Button
+                            size="sm"
+                            className="rounded-full"
+                            onClick={() => openConvo(c)}
+                          >
+                            View
+                          </Button>
                         </div>
                       </div>
                     ))
@@ -573,11 +829,18 @@ const NGODashboard = () => {
       {/* ---------------- REQUEST VIEW / DECISION MODAL ---------------- */}
       <Dialog open={isRequestModalOpen} onOpenChange={setIsRequestModalOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Patient Request</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Patient Request</DialogTitle>
+          </DialogHeader>
 
           {selectedRequest ? (
             <div className="space-y-4 mt-2">
-              <Info label="Patient" value={selectedRequest.patientName || selectedRequest.patientEmail} />
+              <Info
+                label="Patient"
+                value={
+                  selectedRequest.patientName || selectedRequest.patientEmail
+                }
+              />
               <Info label="Email" value={selectedRequest.patientEmail} />
               <Info label="Description" value={selectedRequest.description} />
               <Info label="Phone" value={selectedRequest.phone} />
@@ -595,7 +858,9 @@ const NGODashboard = () => {
               {/* Only show decision UI for pending */}
               {selectedRequest.status === "pending" && (
                 <>
-                  <label className="text-sm font-medium">Write a note (mandatory to accept)</label>
+                  <label className="text-sm font-medium">
+                    Write a note (mandatory to accept)
+                  </label>
                   <textarea
                     rows={4}
                     className="w-full border rounded-md p-2"
@@ -609,12 +874,29 @@ const NGODashboard = () => {
               <DialogFooter>
                 {selectedRequest.status === "pending" && (
                   <>
-                    <Button variant="outline" className="rounded-full" onClick={() => handleNGODecision("decline")}>Decline</Button>
-                    <Button className="rounded-full" onClick={() => handleNGODecision("accept")}>Accept & Send Note</Button>
+                    <Button
+                      variant="outline"
+                      className="rounded-full"
+                      onClick={() => handleNGODecision("decline")}
+                    >
+                      Decline
+                    </Button>
+                    <Button
+                      className="rounded-full"
+                      onClick={() => handleNGODecision("accept")}
+                    >
+                      Accept & Send Note
+                    </Button>
                   </>
                 )}
 
-                <Button variant="ghost" className="rounded-full" onClick={() => setIsRequestModalOpen(false)}>Close</Button>
+                <Button
+                  variant="ghost"
+                  className="rounded-full"
+                  onClick={() => setIsRequestModalOpen(false)}
+                >
+                  Close
+                </Button>
               </DialogFooter>
             </div>
           ) : (
@@ -626,11 +908,16 @@ const NGODashboard = () => {
       {/* ---------------- VIEW CONVERSATION MODAL ---------------- */}
       <Dialog open={isViewConvoOpen} onOpenChange={setIsViewConvoOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Conversation Details</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Conversation Details</DialogTitle>
+          </DialogHeader>
 
           {viewConvo ? (
             <div className="space-y-3 mt-2">
-              <Info label="Patient" value={viewConvo.patientName || viewConvo.patientEmail} />
+              <Info
+                label="Patient"
+                value={viewConvo.patientName || viewConvo.patientEmail}
+              />
               <Info label="Email" value={viewConvo.patientEmail} />
               <Info label="Description" value={viewConvo.description} />
               <Info label="Phone" value={viewConvo.phone} />
@@ -643,8 +930,86 @@ const NGODashboard = () => {
           )}
 
           <DialogFooter>
-            <Button className="rounded-full" onClick={() => setIsViewConvoOpen(false)}>Close</Button>
+            <Button
+              className="rounded-full"
+              onClick={() => setIsViewConvoOpen(false)}
+            >
+              Close
+            </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDoctorModalOpen} onOpenChange={setIsDoctorModalOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Request Collaboration with Doctor</DialogTitle>
+          </DialogHeader>
+
+          {selectedDoctor && (
+            <div className="space-y-4 mt-2">
+              <p className="text-sm text-muted-foreground">
+                Sending request to <b>{selectedDoctor.name}</b>
+              </p>
+
+              {/* Select Mode */}
+              <select
+                className="border p-2 rounded w-full"
+                value={chatMode}
+                onChange={(e) => setChatMode(e.target.value)}
+              >
+                <option value="online">Online Session</option>
+                <option value="offline">Offline Event</option>
+              </select>
+
+              {/* Description */}
+              <textarea
+                className="w-full border rounded p-2"
+                rows={3}
+                placeholder="Describe your need..."
+                value={chatDescription}
+                onChange={(e) => setChatDescription(e.target.value)}
+              />
+
+              {/* Date */}
+              <Input
+                type="date"
+                value={chatDate}
+                onChange={(e) => setChatDate(e.target.value)}
+              />
+
+              {/* Time */}
+              <Input
+                type="time"
+                value={chatTime}
+                onChange={(e) => setChatTime(e.target.value)}
+              />
+
+              {/* Place only for offline */}
+              {chatMode === "offline" && (
+                <Input
+                  placeholder="Enter venue/place"
+                  value={chatPlace}
+                  onChange={(e) => setChatPlace(e.target.value)}
+                />
+              )}
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDoctorModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="rounded-full"
+                  onClick={sendDoctorChatRequest}
+                >
+                  Send Request
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
