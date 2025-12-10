@@ -51,7 +51,7 @@ import RequiredDocumentsModal from '../components/RequiredDocumentsModal';
 
 const PatientDashboard = () => {
 
-  const [activeTab, setActiveTab] = useState('patient'); 
+  const [activeTab, setActiveTab] = useState('patient');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -120,6 +120,7 @@ const PatientDashboard = () => {
   const [isNGOViewPopupOpen, setIsNGOViewPopupOpen] = useState(false);
   const [selectedNGORequest, setSelectedNGORequest] = useState(null);
 
+  
   // -----------------------
   // 1) Auth listener -> load logged-in user's profile
   // -----------------------
@@ -829,7 +830,7 @@ const PatientDashboard = () => {
                   className="border-2 border-dashed border-primary/30 rounded-xl p-12 text-center hover:bg-primary/5 cursor-pointer"
                   onClick={() => document.getElementById("fileInput").click()}
                 >
-                  <input type="file" id="fileInput" className="hidden" />
+                  <input type="file" id="fileInput" className="hidden"/>
                   <Upload className="w-12 h-12 mx-auto text-primary mb-4" />
                   <h3 className="font-semibold mb-2">Upload Report</h3>
                   <p className="text-sm text-muted-foreground">PDF, JPG, PNG</p>
@@ -838,10 +839,10 @@ const PatientDashboard = () => {
             </Card>
           </TabsContent>
           <RequiredDocumentsModal
-              isOpen={isModalOpen}
-              onClose={() => setIsModalOpen(false)}
-              role="patient"
-            />
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            role="patient"
+          />
         </Tabs>
       </div>
 
