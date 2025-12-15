@@ -355,9 +355,9 @@ import { db } from "../firebaseConfig";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 
 const backgroundImages = [
-  "/src/assets/img1.jpg",
-  "/src/assets/img1.jpg",
-  "/src/assets/img3.jpg",
+  "/src/assets/image1.jpeg",
+  "/src/assets/image2.jpeg",
+  "/src/assets/image3.jpeg",
 ];
 
 const Index = () => {
