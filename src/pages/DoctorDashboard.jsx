@@ -14,11 +14,11 @@ import {
   Bell,
   LogOut,
   Search,
-  Upload,
   MessageSquare,
   Edit,
   Building2,
   Trash2,
+  FileText
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -37,12 +37,15 @@ import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore"; // ➤ A
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { onSnapshot } from "firebase/firestore";
 import { serverTimestamp } from "firebase/firestore";
+import RequiredDocumentsModal from '../components/RequiredDocumentsModal';
 
 const DoctorDashboard = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [doctorData, setDoctorData] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState('doctor');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -117,24 +120,6 @@ const DoctorDashboard = () => {
 
     fetchNGOs();
   }, [navigate]);
-
-  // 🔥 Fetch NGO → Doctor chat requests
-  useEffect(() => {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    const q = query(
-      collection(db, "docNGoChat"),
-      where("doctorId", "==", user.uid)
-    );
-
-    const unsub = onSnapshot(q, (snap) => {
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setNgoChats(list);
-    });
-
-    return () => unsub();
-  }, []);
 
   // 🔥 Fetch Consultations (separate useEffect)
   useEffect(() => {
@@ -212,13 +197,6 @@ const DoctorDashboard = () => {
   };
 
   const [ngoList, setNgoList] = useState([]);
-
-  // NGO → Doctor chat requests
-  const [ngoChats, setNgoChats] = useState([]);
-  const [selectedNgoChat, setSelectedNgoChat] = useState(null);
-  const [isNgoChatModalOpen, setIsNgoChatModalOpen] = useState(false);
-  const [doctorResponseNote, setDoctorResponseNote] = useState("");
-
   // Build distinct location options for NGOs
   const ngoLocations = [
     "all",
@@ -248,37 +226,6 @@ const DoctorDashboard = () => {
     });
 
     setIsConsultModalOpen(false);
-  };
-
-  // Doctor decision for NGO chat
-  const handleNgoChatDecision = async (decision) => {
-    if (!selectedNgoChat) return;
-
-    const ref = doc(db, "docNGoChat", selectedNgoChat.id);
-
-    if (decision === "decline") {
-      await updateDoc(ref, {
-        status: "declined",
-        doctorNote: null,
-        updatedAt: serverTimestamp(),
-      });
-      setIsNgoChatModalOpen(false);
-      return;
-    }
-
-    // Accept → note required
-    if (!doctorResponseNote.trim()) {
-      alert("Please write a note before accepting.");
-      return;
-    }
-
-    await updateDoc(ref, {
-      status: "accepted",
-      doctorNote: doctorResponseNote,
-      updatedAt: serverTimestamp(),
-    });
-
-    setIsNgoChatModalOpen(false);
   };
 
   return (
@@ -313,21 +260,15 @@ const DoctorDashboard = () => {
 
       <div className="container mx-auto px-4 py-8">
         <Tabs defaultValue="profile" className="space-y-8">
-          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-5 rounded-full">
+          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-3 rounded-full">
             <TabsTrigger value="profile" className="rounded-full">
               Profile
-            </TabsTrigger>
-            <TabsTrigger value="reports" className="rounded-full">
-              My Reports
             </TabsTrigger>
             <TabsTrigger value="ngos" className="rounded-full">
               Connect with NGOs
             </TabsTrigger>
             <TabsTrigger value="consultations" className="rounded-full">
               Consultations
-            </TabsTrigger>
-            <TabsTrigger value="ngo-messages" className="rounded-full">
-              NGO Messages
             </TabsTrigger>
           </TabsList>
 
@@ -346,6 +287,16 @@ const DoctorDashboard = () => {
 
                 {/* ➤ EDIT + DELETE BUTTONS */}
                 <div className="flex gap-2">
+                  {/* --- NEW: Documents Checklist Button --- */}
+                  <Button
+                    // Replicate the styling from the Edit Profile button
+                    className="rounded-full"
+                    onClick={() => setIsModalOpen(true)} // <-- This opens the modal (ensure setIsModalOpen state is defined)
+                  >
+                    {/* Using a Lucide icon for consistency, like 'ScrollText' or 'FileText' */}
+                    <FileText className="w-4 h-4 mr-2" /> Documents Checklist
+                  </Button>
+
                   <Button className="rounded-full" onClick={handleEditOpen}>
                     <Edit className="w-4 h-4 mr-2" />
                     Edit Profile
@@ -471,27 +422,6 @@ const DoctorDashboard = () => {
             </div>
           </TabsContent>
 
-          {/* Reports */}
-          <TabsContent value="reports" className="space-y-6">
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle>Upload Document</CardTitle>
-                <CardDescription>Share your documents</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div
-                  className="border-2 border-dashed border-primary/30 rounded-xl p-12 text-center hover:bg-primary/5 cursor-pointer"
-                  onClick={() => document.getElementById("fileInput").click()}
-                >
-                  <input type="file" id="fileInput" className="hidden" />
-                  <Upload className="w-12 h-12 mx-auto text-primary mb-4" />
-                  <h3 className="font-semibold mb-2">Upload Report</h3>
-                  <p className="text-sm text-muted-foreground">PDF, JPG, PNG</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           {/* NGOs */}
           <TabsContent value="ngos" className="space-y-6">
             <div className="flex flex-col gap-4">
@@ -611,62 +541,11 @@ const DoctorDashboard = () => {
               ))
             )}
           </TabsContent>
-
-          {/* NGO → Doctor Messages */}
-          <TabsContent value="ngo-messages" className="space-y-6">
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle>NGO Requests</CardTitle>
-                <CardDescription>Messages sent by NGOs</CardDescription>
-              </CardHeader>
-
-              <CardContent>
-                {ngoChats.length === 0 ? (
-                  <p className="text-muted-foreground">No NGO requests yet.</p>
-                ) : (
-                  ngoChats.map((chat) => (
-                    <div
-                      key={chat.id}
-                      className="border p-4 rounded-lg mb-3 hover:bg-muted/30 flex justify-between items-center"
-                    >
-                      <div>
-                        <p className="font-bold">{chat.ngoName}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {chat.description.slice(0, 50)}...
-                        </p>
-                        <p className="text-xs mt-1">
-                          <strong>Status:</strong>{" "}
-                          <span
-                            className={
-                              chat.status === "accepted"
-                                ? "text-green-600"
-                                : chat.status === "declined"
-                                  ? "text-red-600"
-                                  : "text-yellow-600"
-                            }
-                          >
-                            {chat.status}
-                          </span>
-                        </p>
-                      </div>
-
-                      <Button
-                        size="sm"
-                        className="rounded-full"
-                        onClick={() => {
-                          setSelectedNgoChat(chat);
-                          setDoctorResponseNote(chat.doctorNote || "");
-                          setIsNgoChatModalOpen(true);
-                        }}
-                      >
-                        View
-                      </Button>
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+          <RequiredDocumentsModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            role="doctor"
+          />
         </Tabs>
       </div>
 
@@ -792,9 +671,6 @@ const DoctorDashboard = () => {
         </DialogContent>
       </Dialog>
 
-
-      {/*  Doctor -> patient acceptance Modal */}
-
       <Dialog open={isConsultModalOpen} onOpenChange={setIsConsultModalOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -875,83 +751,6 @@ const DoctorDashboard = () => {
                 </>
               )}
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* NGO → Doctor Chat Modal */}
-      <Dialog open={isNgoChatModalOpen} onOpenChange={setIsNgoChatModalOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>NGO Request Details</DialogTitle>
-          </DialogHeader>
-
-          {selectedNgoChat ? (
-            <div className="space-y-4">
-              <p>
-                <strong>NGO:</strong> {selectedNgoChat.ngoName}
-              </p>
-              <p>
-                <strong>Mode:</strong> {selectedNgoChat.messageType}
-              </p>
-
-              <p>
-                <strong>Description:</strong> {selectedNgoChat.description}
-              </p>
-
-              <p>
-                <strong>Date:</strong> {selectedNgoChat.date}
-              </p>
-              <p>
-                <strong>Time:</strong> {selectedNgoChat.time}
-              </p>
-
-              {selectedNgoChat.messageType === "offline" && (
-                <p>
-                  <strong>Place:</strong> {selectedNgoChat.place}
-                </p>
-              )}
-
-              {/* Already accepted */}
-              {selectedNgoChat.status === "accepted" && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Your Note:</p>
-                  <p className="font-medium">{selectedNgoChat.doctorNote}</p>
-                </div>
-              )}
-
-              {/* Pending Action */}
-              {selectedNgoChat.status === "pending" && (
-                <>
-                  <textarea
-                    className="w-full border rounded-md p-2"
-                    rows={3}
-                    placeholder="Write a note..."
-                    value={doctorResponseNote}
-                    onChange={(e) => setDoctorResponseNote(e.target.value)}
-                  />
-
-                  <DialogFooter>
-                    <Button
-                      variant="outline"
-                      className="rounded-full"
-                      onClick={() => handleNgoChatDecision("decline")}
-                    >
-                      Decline
-                    </Button>
-
-                    <Button
-                      className="rounded-full"
-                      onClick={() => handleNgoChatDecision("accept")}
-                    >
-                      Accept Request
-                    </Button>
-                  </DialogFooter>
-                </>
-              )}
-            </div>
-          ) : (
-            <p>Loading...</p>
           )}
         </DialogContent>
       </Dialog>
