@@ -477,6 +477,44 @@ const Index = () => {
         </p>
       </section>
 
+      <section className="py-16 bg-gray-50">
+        <div className="container mx-auto px-6 text-center">
+
+          <h2 className="text-3xl md:text-4xl font-bold text-teal-800 mb-4">
+            Healthcare Schemes & Financial Aid
+          </h2>
+          <p className="text-xl text-gray-600 mb-10">
+            Discover government and private programs available through our network of providers.
+          </p>
+
+          {/* Grid of Scheme Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+            {/* Scheme Card 1: Government/State */}
+            <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow border-t-4 border-emerald-500">
+              <h3 className="text-2xl font-semibold text-emerald-600 mb-3">Ayushman Bharat</h3>
+              <p className="text-gray-600 mb-4">India's largest health insurance scheme offering coverage for low-income families.</p>
+              <a href="https://web.umang.gov.in/landing/scheme/detail/ayushman-bharat-pradhan-mantri-jan-arogya-yojana_ab-pmjay.html" target="_blank" className="text-teal-600 font-medium hover:underline">View Details</a>
+            </div>
+
+            {/* Scheme Card 2: NGO/Private */}
+            <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow border-t-4 border-teal-500">
+              <h3 className="text-2xl font-semibold text-teal-600 mb-3">Seva NGO Fund</h3>
+              <p className="text-gray-600 mb-4">Financial assistance provided by partner NGOs for critical care services.</p>
+              <a href="/schemes/ngofund" className="text-teal-600 font-medium hover:underline">View Details</a>
+            </div>
+
+            {/* Scheme Card 3: Hospital/Doctor Initiative */}
+            <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow border-t-4 border-cyan-500">
+              <h3 className="text-2xl font-semibold text-cyan-600 mb-3">Senior Citizen Discount</h3>
+              <p className="text-gray-600 mb-4">Special discounts on OPD fees offered by participating SevaHealth doctors.</p>
+              <a href="/schemes/seniors" className="text-teal-600 font-medium hover:underline">View Details</a>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
       {/* ROLE BUTTONS (unchanged except styling) */}
       <section className="py-16 bg-background">
         <div className="container mx-auto px-4">
@@ -608,11 +646,10 @@ const Index = () => {
                       className="p-1.5 rounded-full transition-transform hover:scale-110"
                     >
                       <Heart
-                        className={`w-7 h-7 ${
-                          active
+                        className={`w-7 h-7 ${active
                             ? "text-red-500 fill-red-500"
                             : "text-emerald-600"
-                        }`}
+                          }`}
                       />
                     </button>
                   );
