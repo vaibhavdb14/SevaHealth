@@ -52,7 +52,6 @@ import {
 
 import RequiredDocumentsModal from '../components/RequiredDocumentsModal';
 
-
 /**
  * NGODashboard
  *
@@ -73,6 +72,7 @@ const NGODashboard = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  // documents checklist
   const [activeTab, setActiveTab] = useState('ngo');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -431,6 +431,7 @@ const NGODashboard = () => {
                 </div>
               </CardHeader>
 
+
               <CardContent className="space-y-3">
                 {ngoData ? (
                   <>
@@ -462,6 +463,12 @@ const NGODashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
+          {/* for documents checklist */}
+          <RequiredDocumentsModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            role="ngo"
+          />
 
           {/* ---------------- EDIT PROFILE MODAL ---------------- */}
           <Dialog open={isEditing} onOpenChange={setIsEditing}>
@@ -737,7 +744,6 @@ const NGODashboard = () => {
                   <p className="text-muted-foreground">No requests yet.</p>
                 ) : (
                   requests
-                    .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
                     .sort(
                       (a, b) =>
                         (b.createdAt?.seconds || 0) -
@@ -825,25 +831,21 @@ const NGODashboard = () => {
                           </div>
                         </div>
 
-                        <Button
-                          size="sm"
-                          className="rounded-full"
-                          onClick={() => openConvo(c)}
-                        >
-                          View
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            className="rounded-full"
+                            onClick={() => openConvo(c)}
+                          >
+                            View
+                          </Button>
+                        </div>
                       </div>
                     ))
                 )}
               </CardContent>
             </Card>
           </TabsContent>
-
-          <RequiredDocumentsModal
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            role="ngo"
-          />
         </Tabs>
       </div>
 

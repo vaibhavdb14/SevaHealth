@@ -37,6 +37,7 @@ import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore"; // ➤ A
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { onSnapshot } from "firebase/firestore";
 import { serverTimestamp } from "firebase/firestore";
+
 import RequiredDocumentsModal from '../components/RequiredDocumentsModal';
 
 const DoctorDashboard = () => {
@@ -44,6 +45,7 @@ const DoctorDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [doctorData, setDoctorData] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  // documents checklist
   const [activeTab, setActiveTab] = useState('doctor');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -372,6 +374,7 @@ const DoctorDashboard = () => {
                 </div>
               </CardHeader>
 
+
               <CardContent className="space-y-4">
                 {doctorData ? (
                   <div className="grid md:grid-cols-2 gap-4">
@@ -480,6 +483,12 @@ const DoctorDashboard = () => {
               </Card>
             </div>
           </TabsContent>
+          {/* for documents checklist */}
+          <RequiredDocumentsModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            role="doctor"
+          />
 
           {/* NGOs */}
           <TabsContent value="ngos" className="space-y-6">
@@ -600,11 +609,6 @@ const DoctorDashboard = () => {
               ))
             )}
           </TabsContent>
-          <RequiredDocumentsModal
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            role="doctor"
-          />
 
           {/* NGO → Doctor Messages */}
           <TabsContent value="ngo-messages" className="space-y-6">
@@ -635,8 +639,8 @@ const DoctorDashboard = () => {
                               chat.status === "accepted"
                                 ? "text-green-600"
                                 : chat.status === "declined"
-                                ? "text-red-600"
-                                : "text-yellow-600"
+                                  ? "text-red-600"
+                                  : "text-yellow-600"
                             }
                           >
                             {chat.status}
@@ -800,7 +804,7 @@ const DoctorDashboard = () => {
 
               <div className="bg-muted/50 rounded-md p-3">
                 <p className="text-xs text-muted-foreground mb-1">
-                  Problem Description:
+                  Problem Description:d
                 </p>
                 <p className="text-sm">
                   {selectedConsultation.initialDescription}
