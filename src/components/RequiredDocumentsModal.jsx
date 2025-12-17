@@ -12,16 +12,16 @@ const DOCUMENT_CONTENT_MAP = {
                     Please keep the following documents ready to ensure smooth consultation, accurate medical history tracking, and faster NGO assistance:
                 </p>
 
-                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                {/* <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <h4 className="font-bold text-lg mb-2 text-teal-700">1. Identity Verification</h4>
                     <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
                         <li><strong>Primary ID:</strong> Aadhaar Card / Voter ID / Passport.</li>
                         <li><strong>Contact Proof:</strong> Active Mobile Number for OTP and updates.</li>
                     </ul>
-                </div>
+                </div> */}
 
                 <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <h4 className="font-bold text-lg mb-2 text-teal-700">2. Medical Records</h4>
+                    <h4 className="font-bold text-lg mb-2 text-teal-700">1. Medical Records</h4>
                     <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
                         <li>Previous prescriptions and treatment notes.</li>
                         <li>Diagnostic reports (Blood tests, X-ray, MRI, CT, sonography) from the last 6–12 months.</li>
@@ -30,7 +30,7 @@ const DOCUMENT_CONTENT_MAP = {
                 </div>
 
                 <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <h4 className="font-bold text-lg mb-2 text-teal-700">3. NGO Assistance (If applicable)</h4>
+                    <h4 className="font-bold text-lg mb-2 text-teal-700">2. NGO Assistance (If applicable)</h4>
                     <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
                         <li>Income Certificate or BPL Card.</li>
                         <li>Local address verification (electricity bill, rent agreement).</li>
@@ -52,9 +52,6 @@ const DOCUMENT_CONTENT_MAP = {
                 <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <h4 className="font-bold text-lg mb-2 text-teal-700">1. Professional Credentials (Mandatory)</h4>
                     <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
-                        <li>MBBS / MD / MS degree certificate.</li>
-                        <li>Valid Medical Council Registration (MCI/SMC).</li>
-                        <li>Government Photo ID (Aadhaar / Passport).</li>
                         <li><strong>Doctor’s Official Stamp/Seal:</strong> Mandatory to validate digital prescriptions and avoid rejection.</li>
                     </ul>
                 </div>
@@ -83,8 +80,8 @@ const DOCUMENT_CONTENT_MAP = {
                     <h4 className="font-bold text-lg mb-2 text-teal-700">1. Registration & Legal Compliance</h4>
                     <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
                         <li>NGO Registration Certificate (Society/Trust/Section 8).</li>
-                        <li>PAN of the organization.</li>
-                        <li>12A & 80G certificates (if applicable).</li>
+                        {/* <li>PAN of the organization.</li>
+                        <li>12A & 80G certificates (if applicable).</li> */}
                         <li><strong>Authorized Stamp/Seal of NGO:</strong> Required for validation of documents and official letters.</li>
                     </ul>
                 </div>

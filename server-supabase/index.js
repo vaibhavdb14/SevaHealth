@@ -9,9 +9,15 @@ dotenv.config();
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
 
+// app.use(cors({
+//   origin: "http://localhost:8080",
+// }));
 app.use(cors({
   origin: "http://localhost:8080",
+  methods: ["GET", "POST", "DELETE"],
+  credentials: true
 }));
+
 
 app.use(express.json());
 
@@ -32,6 +38,8 @@ app.get("/get-reports", async (req, res) => {
       .select("*")
       .eq("user_id", uid)
       .order("uploaded_at", { ascending: false });
+      // .order("created_at", { ascending: false });
+
 
     if (error) throw error;
     res.json(data);
@@ -142,6 +150,201 @@ app.delete("/delete-report", async (req, res) => {
     res.status(500).json({ error: "Delete failed" });
   }
 });
+
+// doctors
+
+/* ---------------- UPLOAD DOCTOR DOCUMENT ---------------- */
+app.post("/upload-doctor-document", upload.single("file"), async (req, res) => {
+  try {
+    const { doctorUid, documentType } = req.body; // documentType = "STAMP" or "OTHER"
+    const file = req.file;
+
+    if (!doctorUid || !documentType || !file) {
+      return res.status(400).json({ error: "Missing data" });
+    }
+
+    const ext = file.originalname.split(".").pop();
+    const filePath = `${doctorUid}/${documentType}_${Date.now()}.${ext}`;
+
+    // Upload to doctor-documents bucket
+    const { error: storageError } = await supabase.storage
+      .from("doctor-documents")
+      .upload(filePath, file.buffer, {
+        contentType: file.mimetype,
+      });
+
+    if (storageError) throw storageError;
+
+    // Save metadata
+    const { error: dbError } = await supabase
+      .from("doctor_documents")
+      .insert({
+        doctor_uid: doctorUid,
+        file_path: filePath,
+        document_type: documentType,
+        document_name: file.originalname,
+      });
+
+    if (dbError) throw dbError;
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Doctor document upload failed" });
+  }
+});
+
+/* ---------------- GET DOCTOR DOCUMENTS ---------------- */
+app.get("/get-doctor-documents", async (req, res) => {
+  try {
+    const { doctorUid } = req.query;
+    if (!doctorUid) return res.status(400).json({ error: "doctorUid required" });
+
+    const { data, error } = await supabase
+      .from("doctor_documents")
+      .select("*")
+      .eq("doctor_uid", doctorUid)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch doctor documents" });
+  }
+});
+
+/* ---------------- VIEW DOCTOR DOCUMENT ---------------- */
+app.get("/get-doctor-signed-url", async (req, res) => {
+  try {
+    const { filePath } = req.query;
+    if (!filePath) return res.status(400).json({ error: "filePath required" });
+
+    const { data, error } = await supabase.storage
+      .from("doctor-documents")
+      .createSignedUrl(filePath, 60); // valid 60 seconds
+
+    if (error) throw error;
+    res.json({ signedUrl: data.signedUrl });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to generate signed URL" });
+  }
+});
+
+/* ---------------- RENAME DOCTOR DOCUMENT ---------------- */
+app.post("/rename-doctor-document", async (req, res) => {
+  try {
+    const { id, newName } = req.body;
+    if (!id || !newName) return res.status(400).json({ error: "Missing data" });
+
+    const { error } = await supabase
+      .from("doctor_documents")
+      .update({ document_name: newName })
+      .eq("id", id);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Rename failed" });
+  }
+});
+
+/* ---------------- DELETE DOCTOR DOCUMENT ---------------- */
+app.delete("/delete-doctor-document", async (req, res) => {
+  try {
+    const { id, filePath } = req.body;
+    if (!id || !filePath) return res.status(400).json({ error: "Missing data" });
+
+    // Delete file from storage
+    const { error: storageError } = await supabase.storage
+      .from("doctor-documents")
+      .remove([filePath]);
+
+    if (storageError) throw storageError;
+
+    // Delete record from DB
+    const { error: dbError } = await supabase
+      .from("doctor_documents")
+      .delete()
+      .eq("id", id);
+
+    if (dbError) throw dbError;
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Delete failed" });
+  }
+});
+
+
+// /* ---------------- UPLOAD DOCTOR DOCUMENT ---------------- */
+// app.post("/upload-doctor-document", upload.single("file"), async (req, res) => {
+//   try {
+//     const { doctorUid, documentType } = req.body;
+//     const file = req.file;
+
+//     if (!doctorUid || !documentType || !file) {
+//       return res.status(400).json({ error: "Missing data" });
+//     }
+
+//     const ext = file.originalname.split(".").pop();
+//     const filePath = `${doctorUid}/${documentType}_${Date.now()}.${ext}`;
+
+//     // Upload to doctor bucket
+//     const { error: storageError } = await supabase.storage
+//       .from("doctor-documents")
+//       .upload(filePath, file.buffer, {
+//         contentType: file.mimetype,
+//       });
+
+//     if (storageError) throw storageError;
+
+//     // Save metadata
+//     const { error: dbError } = await supabase
+//       .from("doctor_documents")
+//       .insert({
+//         doctor_uid: doctorUid,
+//         file_path: filePath,
+//         document_type: documentType,
+//         document_name: file.originalname,
+//       });
+
+//     if (dbError) throw dbError;
+
+//     res.json({ success: true });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: "Doctor document upload failed" });
+//   }
+// });
+
+// // fetch doctor document
+// app.get("/get-doctor-documents", async (req, res) => {
+//   try {
+//     const { doctorUid } = req.query;
+
+//     if (!doctorUid) {
+//       return res.status(400).json({ documents: [], error: "doctorUid required" });
+//     }
+
+//     const { data, error } = await supabase
+//       .from("doctor_documents")
+//       .select("*")
+//       .eq("doctor_uid", doctorUid)
+//       .order("created_at", { ascending: false });
+
+//     if (error) throw error;
+
+//     res.json({ documents: data || [] });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ documents: [], error: "Failed to fetch documents" });
+//   }
+// });
+
 
 
 app.listen(3000, () => {

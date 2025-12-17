@@ -50,9 +50,21 @@ import { deleteUser, onAuthStateChanged } from "firebase/auth";
 import { setDoc, increment } from "firebase/firestore";
 import RequiredDocumentsModal from '../components/RequiredDocumentsModal';
 
+// supabase
+import { supabase } from "../supabaseClient";
+import { Pencil } from "lucide-react";
+
+
 
 const PatientDashboard = () => {
 
+  // Reports supabase
+  const [reports, setReports] = useState([]);
+  const [editingReportId, setEditingReportId] = useState(null);
+  const [editedName, setEditedName] = useState("");
+
+
+  // for documents checklist
   const [activeTab, setActiveTab] = useState('patient');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
@@ -465,6 +477,113 @@ const PatientDashboard = () => {
   // const doctorHasConsultation = (docUid) =>
   //   consultations.some((c) => c.doctorId === docUid);
 
+
+
+
+  // supabase
+  useEffect(() => {
+    fetchReports();
+  }, []);
+
+  // Fetch reports from backend
+  const fetchReports = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+      const res = await fetch(`http://localhost:3000/get-reports?uid=${user.uid}`);
+      const data = await res.json();
+      setReports(data || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Upload report via backend
+  const handleReportUpload = async (file) => {
+    if (!file) return;
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("firebaseUid", user.uid);
+
+    try {
+      const res = await fetch("http://localhost:3000/upload-report", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.error) {
+        alert("Upload failed");
+        return;
+      }
+      fetchReports();
+    } catch (err) {
+      console.error(err);
+      alert("Upload failed");
+    }
+  };
+
+  // View report via backend-signed URL
+  const viewReport = async (path) => {
+    try {
+      const res = await fetch(
+        `http://localhost:3000/get-signed-url?firebaseUid=${auth.currentUser.uid}&filePath=${encodeURIComponent(path)}`
+      );
+      const data = await res.json();
+      if (data.signedUrl) window.open(data.signedUrl, "_blank");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Rename report via backend
+  const saveReportName = async (id) => {
+    try {
+      const res = await fetch("http://localhost:3000/rename-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, newName: editedName }),
+      });
+      const data = await res.json();
+      if (!data.error) fetchReports();
+      setEditingReportId(null);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // delete report
+  const deleteReport = async (id, filePath) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this report?");
+    if (!confirmDelete) return;
+
+    try {
+      const res = await fetch("http://localhost:3000/delete-report", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id, filePath }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        fetchReports(); // refresh list
+      } else {
+        alert("Failed to delete report");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error deleting report");
+    }
+  };
+
+
+
   // -----------------------
   // JSX render
   // -----------------------
@@ -578,11 +697,11 @@ const PatientDashboard = () => {
           </Card>
         )}
         {/* for documents checklist */}
-          <RequiredDocumentsModal
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            role="patient"
-          />
+        <RequiredDocumentsModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          role="patient"
+        />
 
         {/* Tabs */}
         <Tabs defaultValue="doctors" className="space-y-8">
@@ -824,6 +943,7 @@ const PatientDashboard = () => {
               )}
             </div>
           </TabsContent>
+
           {/* NGO Requests */}
           <TabsContent value="ngo-requests" className="space-y-6">
             <Card className="shadow-card">
@@ -859,8 +979,8 @@ const PatientDashboard = () => {
                             req.status === "accepted"
                               ? "text-emerald-600"
                               : req.status === "declined"
-                              ? "text-red-600"
-                              : "text-yellow-600"
+                                ? "text-red-600"
+                                : "text-yellow-600"
                           }
                         >
                           {req.status}
@@ -884,6 +1004,7 @@ const PatientDashboard = () => {
             </Card>
           </TabsContent>
 
+          {/* Consultations */}
           <TabsContent value="consultations" className="space-y-6">
             <Card className="shadow-card">
               <CardHeader>
@@ -920,8 +1041,8 @@ const PatientDashboard = () => {
                               c.status === "accepted"
                                 ? "text-emerald-600"
                                 : c.status === "declined"
-                                ? "text-red-600"
-                                : "text-yellow-600"
+                                  ? "text-red-600"
+                                  : "text-yellow-600"
                             }
                           >
                             {c.status}
@@ -971,6 +1092,86 @@ const PatientDashboard = () => {
                 <CardTitle>Upload Medical Reports</CardTitle>
                 <CardDescription>Share your documents</CardDescription>
               </CardHeader>
+
+              <CardContent className="space-y-6">
+                {/* Upload Box */}
+                <div
+                  className="border-2 border-dashed border-primary/30 rounded-xl p-12 text-center hover:bg-primary/5 cursor-pointer"
+                  onClick={() => document.getElementById("fileInput").click()}
+                >
+                  <input
+                    type="file"
+                    id="fileInput"
+                    className="hidden"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => handleReportUpload(e.target.files[0])}
+                  />
+                  <Upload className="w-12 h-12 mx-auto text-primary mb-4" />
+                  <h3 className="font-semibold mb-2">Upload Report</h3>
+                  <p className="text-sm text-muted-foreground">PDF, JPG, PNG</p>
+                </div>
+
+                {/* Uploaded Reports */}
+                <div className="space-y-3">
+                  {reports.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      No reports uploaded yet.
+                    </p>
+                  )}
+
+                  {reports.map((r) => (
+                    <div
+                      key={r.id}
+                      className="flex items-center justify-between border rounded-lg p-3"
+                    >
+                      {editingReportId === r.id ? (
+                        <Input
+                          value={editedName}
+                          onChange={(e) => setEditedName(e.target.value)}
+                          onBlur={() => saveReportName(r.id)}
+                          autoFocus
+                        />
+                      ) : (
+                        <p className="font-medium">{r.report_name}</p>
+                      )}
+
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setEditingReportId(r.id);
+                            setEditedName(r.report_name);
+                          }}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          onClick={() => viewReport(r.file_path)}
+                        >
+                          View
+                        </Button>
+
+                        <button size="icon"
+                          className="rounded-full" onClick={() => deleteReport(r.id, r.file_path)}>
+                          <Trash2 />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* <TabsContent value="reports" className="space-y-6">
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle>Upload Medical Reports</CardTitle>
+                <CardDescription>Share your documents</CardDescription>
+              </CardHeader>
               <CardContent className="space-y-6">
                 <div
                   className="border-2 border-dashed border-primary/30 rounded-xl p-12 text-center hover:bg-primary/5 cursor-pointer"
@@ -983,7 +1184,7 @@ const PatientDashboard = () => {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          </TabsContent> */}
         </Tabs>
       </div>
 
