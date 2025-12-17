@@ -17,7 +17,6 @@ const DOCUMENT_CONTENT_MAP = {
                     <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
                         <li><strong>Primary ID:</strong> Aadhaar Card / Voter ID / Passport.</li>
                         <li><strong>Contact Proof:</strong> Active Mobile Number for OTP and updates.</li>
-                        <li><strong>Patient Stamp/Seal:</strong> Mandatory for identity validation since many photo prescriptions are not accepted.</li>
                     </ul>
                 </div>
 

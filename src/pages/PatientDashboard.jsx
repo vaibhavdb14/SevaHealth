@@ -47,7 +47,9 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { deleteUser, onAuthStateChanged } from "firebase/auth";
+import { setDoc, increment } from "firebase/firestore";
 import RequiredDocumentsModal from '../components/RequiredDocumentsModal';
+
 
 const PatientDashboard = () => {
 
@@ -120,7 +122,9 @@ const PatientDashboard = () => {
   const [isNGOViewPopupOpen, setIsNGOViewPopupOpen] = useState(false);
   const [selectedNGORequest, setSelectedNGORequest] = useState(null);
 
-  
+  //Sevapoints (omitted for brevity)
+  const [givenPoints, setGivenPoints] = useState({});
+
   // -----------------------
   // 1) Auth listener -> load logged-in user's profile
   // -----------------------
@@ -172,9 +176,20 @@ const PatientDashboard = () => {
     const fetchDoctors = async () => {
       try {
         const qSnap = await getDocs(collection(db, "users"));
-        const docs = qSnap.docs
-          .filter((d) => d.data().role === "Doctor")
-          .map((d) => ({ uid: d.id, ...d.data() })); // keep doc id as uid
+        const docs = await Promise.all(
+          qSnap.docs
+            .filter((d) => d.data().role === "Doctor")
+            .map(async (d) => {
+              const doctorId = d.id;
+
+              // load seva points
+              const ptsSnap = await getDoc(doc(db, "SevaPoints", doctorId));
+              const sevaPoints = ptsSnap.exists() ? ptsSnap.data().points : 0;
+
+              return { uid: doctorId, sevaPoints, ...d.data() };
+            })
+        );
+
         setDoctorList(docs);
       } catch (err) {
         console.error("Error fetching doctors:", err);
@@ -254,6 +269,27 @@ const PatientDashboard = () => {
     return () => unsub && unsub();
   }, []);
 
+  //Sevapoints useEffect (omitted for brevity)
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const q = query(
+      collection(db, "SevaTransactions"),
+      where("patientId", "==", user.uid)
+    );
+
+    const unsub = onSnapshot(q, (snap) => {
+      const temp = {};
+      snap.docs.forEach((d) => {
+        temp[d.data().consultationId] = true;
+      });
+      setGivenPoints(temp);
+    });
+
+    return () => unsub();
+  }, []);
+
   // -----------------------
   // Profile update / delete (explicitly use auth.currentUser.uid)
   // -----------------------
@@ -294,9 +330,7 @@ const PatientDashboard = () => {
   const handleOpenConsultation = (doctor) => {
     setSelectedDoctor(doctor);
     setConsultDescription("");
-    // If there's an existing consultation with this doctor, disable further edits
-    const existing = consultations.find((c) => c.doctorId === doctor.uid);
-    setIsDescriptionSent(!!(existing && existing.status !== "pending"));
+    setIsDescriptionSent(false); // always allow new requests
     setIsConsultationModalOpen(true);
   };
 
@@ -400,9 +434,36 @@ const PatientDashboard = () => {
     }
   };
 
+  //sevapoints helper (omitted for brevity)
+  const giveSevaPoint = async (consultation) => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+      // 1️⃣ Add +1 to doctor’s SevaPoints doc
+      const ref = doc(db, "SevaPoints", consultation.doctorId);
+      await setDoc(ref, { points: increment(1) }, { merge: true });
+
+      // 2️⃣ Mark this consultation as "point already given"
+      await addDoc(collection(db, "SevaTransactions"), {
+        doctorId: consultation.doctorId,
+        patientId: user.uid,
+        consultationId: consultation.id,
+        createdAt: serverTimestamp(),
+      });
+
+      setGivenPoints((prev) => ({ ...prev, [consultation.id]: true }));
+
+      alert("You gave 1 Seva Point ❤️");
+    } catch (err) {
+      console.error("Error giving point:", err);
+      alert("Failed to give point");
+    }
+  };
+
   // small helper: does this doctor have any consultation with this patient?
-  const doctorHasConsultation = (docUid) =>
-    consultations.some((c) => c.doctorId === docUid);
+  // const doctorHasConsultation = (docUid) =>
+  //   consultations.some((c) => c.doctorId === docUid);
 
   // -----------------------
   // JSX render
@@ -480,6 +541,7 @@ const PatientDashboard = () => {
               </div>
             </CardHeader>
 
+
             <CardContent className="grid md:grid-cols-3 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Email</p>
@@ -515,10 +577,16 @@ const PatientDashboard = () => {
             </CardContent>
           </Card>
         )}
+        {/* for documents checklist */}
+          <RequiredDocumentsModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            role="patient"
+          />
 
         {/* Tabs */}
         <Tabs defaultValue="doctors" className="space-y-8">
-          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-4 rounded-full">
+          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-5   rounded-full">
             <TabsTrigger value="doctors" className="rounded-full">
               Find Doctor
             </TabsTrigger>
@@ -533,6 +601,9 @@ const PatientDashboard = () => {
 
             <TabsTrigger value="reports" className="rounded-full">
               My Reports
+            </TabsTrigger>
+            <TabsTrigger value="consultations" className="rounded-full">
+              My Consultations
             </TabsTrigger>
           </TabsList>
           {/* Doctors */}
@@ -617,9 +688,15 @@ const PatientDashboard = () => {
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <CardTitle className="text-lg">
+                            <CardTitle className="text-lg flex items-center gap-2">
                               {doctor.name}
+                              {doctor.sevaPoints !== undefined && (
+                                <span className="text-pink-600 text-sm">
+                                  ❤️ {doctor.sevaPoints}
+                                </span>
+                              )}
                             </CardTitle>
+
                             <CardDescription>
                               {doctor.specialization}
                             </CardDescription>
@@ -642,17 +719,6 @@ const PatientDashboard = () => {
                           >
                             Connect
                           </Button>
-
-                          {doctorHasConsultation(doctor.uid) && (
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="rounded-full"
-                              onClick={() => openChatRoom(doctor)}
-                            >
-                              <MessageSquare className="w-4 h-4" />
-                            </Button>
-                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -793,8 +859,8 @@ const PatientDashboard = () => {
                             req.status === "accepted"
                               ? "text-emerald-600"
                               : req.status === "declined"
-                                ? "text-red-600"
-                                : "text-yellow-600"
+                              ? "text-red-600"
+                              : "text-yellow-600"
                           }
                         >
                           {req.status}
@@ -818,6 +884,86 @@ const PatientDashboard = () => {
             </Card>
           </TabsContent>
 
+          <TabsContent value="consultations" className="space-y-6">
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle>My Consultations</CardTitle>
+                <CardDescription>
+                  Your doctor consultation history
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent>
+                {consultations.length === 0 && (
+                  <p className="text-muted-foreground text-sm">
+                    No consultations yet.
+                  </p>
+                )}
+
+                {consultations.map((c) => {
+                  const doctor = doctorList.find((d) => d.uid === c.doctorId);
+
+                  return (
+                    <div
+                      key={c.id}
+                      className="border p-3 rounded-lg flex justify-between items-center mt-3"
+                    >
+                      <div>
+                        <p className="font-medium">
+                          Doctor: {doctor?.name || "Unknown Doctor"}
+                        </p>
+
+                        <p className="text-xs mt-1">
+                          <strong>Status:</strong>{" "}
+                          <span
+                            className={
+                              c.status === "accepted"
+                                ? "text-emerald-600"
+                                : c.status === "declined"
+                                ? "text-red-600"
+                                : "text-yellow-600"
+                            }
+                          >
+                            {c.status}
+                          </span>
+                        </p>
+                      </div>
+
+                      {c.status === "accepted" && (
+                        <div className="mt-2 flex items-center gap-2">
+                          {!givenPoints[c.id] ? (
+                            <Button
+                              size="sm"
+                              className="rounded-full bg-pink-500 hover:bg-pink-600"
+                              onClick={() => giveSevaPoint(c)}
+                            >
+                              ❤️ Give Seva Point
+                            </Button>
+                          ) : (
+                            <span className="text-pink-600 text-sm">
+                              You gave 1 ❤️
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      <Button
+                        size="sm"
+                        className="rounded-full"
+                        onClick={() => {
+                          setChatData(c);
+                          setIsChatPopupOpen(true);
+                        }}
+                      >
+                        View
+                      </Button>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Reports */}
           <TabsContent value="reports" className="space-y-6">
             <Card className="shadow-card">
@@ -830,7 +976,7 @@ const PatientDashboard = () => {
                   className="border-2 border-dashed border-primary/30 rounded-xl p-12 text-center hover:bg-primary/5 cursor-pointer"
                   onClick={() => document.getElementById("fileInput").click()}
                 >
-                  <input type="file" id="fileInput" className="hidden"/>
+                  <input type="file" id="fileInput" className="hidden" />
                   <Upload className="w-12 h-12 mx-auto text-primary mb-4" />
                   <h3 className="font-semibold mb-2">Upload Report</h3>
                   <p className="text-sm text-muted-foreground">PDF, JPG, PNG</p>
@@ -838,11 +984,6 @@ const PatientDashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
-          <RequiredDocumentsModal
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            role="patient"
-          />
         </Tabs>
       </div>
 
@@ -1013,6 +1154,7 @@ const PatientDashboard = () => {
               <p>
                 <strong>Status:</strong> {chatData.status}
               </p>
+
               {chatData.status === "accepted" && (
                 <>
                   <p>
@@ -1029,6 +1171,7 @@ const PatientDashboard = () => {
                   </p>
                 </>
               )}
+
               {chatData.status === "declined" && (
                 <p className="text-red-600">Doctor declined this request.</p>
               )}
