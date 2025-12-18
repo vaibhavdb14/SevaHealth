@@ -12,11 +12,13 @@ const upload = multer({ storage: multer.memoryStorage() });
 // app.use(cors({
 //   origin: "http://localhost:8080",
 // }));
-app.use(cors({
-  origin: "http://localhost:8080",
-  methods: ["GET", "POST", "DELETE"],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: "http://localhost:8080",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 
 app.use(express.json());
@@ -233,7 +235,7 @@ app.get("/get-doctor-signed-url", async (req, res) => {
 });
 
 /* ---------------- RENAME DOCTOR DOCUMENT ---------------- */
-app.post("/rename-doctor-document", async (req, res) => {
+app.put("/rename-doctor-document", async (req, res) => {
   try {
     const { id, newName } = req.body;
     if (!id || !newName) return res.status(400).json({ error: "Missing data" });
@@ -275,6 +277,136 @@ app.delete("/delete-doctor-document", async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error(err);
+    res.status(500).json({ error: "Delete failed" });
+  }
+});
+
+// NGOs
+/* ---------------- UPLOAD NGO DOCUMENT ---------------- */
+app.post("/upload-ngo-document", upload.single("file"), async (req, res) => {
+  try {
+    const { ngoUid, documentType } = req.body; // e.g. REGISTRATION, LICENSE, OTHER
+    const file = req.file;
+
+    if (!ngoUid || !documentType || !file) {
+      return res.status(400).json({ error: "Missing data" });
+    }
+
+    const ext = file.originalname.split(".").pop();
+    const filePath = `${ngoUid}/${documentType}_${Date.now()}.${ext}`;
+
+    // Upload to NGO bucket
+    const { error: storageError } = await supabase.storage
+      .from("ngo-documents")
+      .upload(filePath, file.buffer, {
+        contentType: file.mimetype,
+      });
+
+    if (storageError) throw storageError;
+
+    // Save metadata
+    const { error: dbError } = await supabase
+      .from("ngo_documents")
+      .insert({
+        ngo_uid: ngoUid,
+        file_path: filePath,
+        document_type: documentType,
+        document_name: file.originalname,
+      });
+
+    if (dbError) throw dbError;
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("NGO upload error:", err);
+    res.status(500).json({ error: "NGO document upload failed" });
+  }
+});
+
+
+/* ---------------- GET NGO DOCUMENTS ---------------- */
+app.get("/get-ngo-documents", async (req, res) => {
+  try {
+    const { ngoUid } = req.query;
+    if (!ngoUid) return res.status(400).json({ error: "ngoUid required" });
+
+    const { data, error } = await supabase
+      .from("ngo_documents")
+      .select("*")
+      .eq("ngo_uid", ngoUid)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    console.error("Fetch NGO docs error:", err);
+    res.status(500).json({ error: "Failed to fetch NGO documents" });
+  }
+});
+
+/* ---------------- VIEW NGO DOCUMENT ---------------- */
+app.get("/get-ngo-signed-url", async (req, res) => {
+  try {
+    const { filePath } = req.query;
+    if (!filePath) return res.status(400).json({ error: "filePath required" });
+
+    const { data, error } = await supabase.storage
+      .from("ngo-documents")
+      .createSignedUrl(filePath, 60);
+
+    if (error) throw error;
+    res.json({ signedUrl: data.signedUrl });
+  } catch (err) {
+    console.error("Signed URL error:", err);
+    res.status(500).json({ error: "Failed to generate signed URL" });
+  }
+});
+
+
+/* ---------------- RENAME NGO DOCUMENT ---------------- */
+app.post("/rename-ngo-document", async (req, res) => {
+  try {
+    const { id, newName } = req.body;
+    if (!id || !newName) return res.status(400).json({ error: "Missing data" });
+
+    const { error } = await supabase
+      .from("ngo_documents")
+      .update({ document_name: newName })
+      .eq("id", id);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Rename NGO doc error:", err);
+    res.status(500).json({ error: "Rename failed" });
+  }
+});
+
+
+/* ---------------- DELETE NGO DOCUMENT ---------------- */
+app.delete("/delete-ngo-document", async (req, res) => {
+  try {
+    const { id, filePath } = req.body;
+    if (!id || !filePath) return res.status(400).json({ error: "Missing data" });
+
+    // Delete file from storage
+    const { error: storageError } = await supabase.storage
+      .from("ngo-documents")
+      .remove([filePath]);
+
+    if (storageError) throw storageError;
+
+    // Delete DB record
+    const { error: dbError } = await supabase
+      .from("ngo_documents")
+      .delete()
+      .eq("id", id);
+
+    if (dbError) throw dbError;
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Delete NGO doc error:", err);
     res.status(500).json({ error: "Delete failed" });
   }
 });

@@ -21,7 +21,9 @@ import {
   BarChart3,
   MessageSquare,
   Users,
-  FileText
+  FileText,
+  Upload,
+  Pencil
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
@@ -66,6 +68,16 @@ import RequiredDocumentsModal from '../components/RequiredDocumentsModal';
 
 const NGODashboard = () => {
   const navigate = useNavigate();
+
+  // supabase
+  const [stamp, setStamp] = useState(null);
+  const [otherDocs, setOtherDocs] = useState([]);
+  const [uploading, setUploading] = useState(false);
+
+  const ngoUid = auth.currentUser?.uid;
+
+
+
 
   // NGO profile & editing
   const [ngoData, setNgoData] = useState(null);
@@ -350,6 +362,177 @@ const NGODashboard = () => {
     }
   };
 
+  // supabase
+  useEffect(() => {
+    fetchNgoDocuments();
+  }, []);
+
+  // fetch
+  const fetchNgoDocuments = async () => {
+    try {
+      const res = await fetch(
+        `http://localhost:3000/get-ngo-documents?ngoUid=${ngoUid}`
+      );
+
+      const data = await res.json();
+
+      if (!Array.isArray(data)) {
+        console.error("Invalid response from backend", data);
+        return;
+      }
+
+      setStamp(data.find((d) => d.document_type === "STAMP") || null);
+      setOtherDocs(data.filter((d) => d.document_type === "OTHER"));
+    } catch (err) {
+      console.error("fetchNgoDocuments error:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (ngoUid) fetchNgoDocuments();
+  }, [ngoUid]);
+
+
+
+  // upload
+  const uploadNgoDocument = async (file, documentType) => {
+  try {
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("ngoUid", ngoUid);
+    formData.append("documentType", documentType);
+
+    const res = await fetch("http://localhost:3000/upload-ngo-document", {
+      method: "POST",
+      body: formData, // ❗ DO NOT set headers
+    });
+
+    const text = await res.text(); // IMPORTANT
+    console.log("Raw response:", text);
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error("Backend returned non-JSON response");
+    }
+
+    if (!res.ok) {
+      throw new Error(data.error || "Upload failed");
+    }
+
+    fetchNgoDocuments(); // refresh
+  } catch (err) {
+    console.error("Upload error:", err);
+    alert(err.message);
+  }
+};
+
+  // const uploadNgoDocument = async (file, type) => {
+  //   if (!file) return;
+
+  //   try {
+  //     setUploading(true);
+
+  //     const formData = new FormData();
+  //     formData.append("document", file);
+  //     formData.append("documentType", type);
+  //     formData.append("ngoUid", ngoUid);
+
+  //     const res = await fetch("http://localhost:3000/upload-ngo-document", {
+  //       method: "POST",
+  //       body: formData,
+  //     });
+
+  //     const text = await res.text();
+  //     const data = JSON.parse(text);
+
+  //     if (!res.ok) throw new Error(data.error);
+
+  //     fetchNgoDocuments();
+  //   } catch (err) {
+  //     console.error("Upload error:", err);
+  //     alert("Failed to upload document");
+  //   } finally {
+  //     setUploading(false);
+  //   }
+  // };
+
+
+
+  // // view
+  const viewNgoDocument = async (filePath) => {
+    try {
+      const res = await fetch(
+        `http://localhost:3000/get-ngo-signed-url?filePath=${encodeURIComponent(
+          filePath
+        )}`
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error);
+
+      window.open(data.signedUrl, "_blank");
+    } catch (err) {
+      console.error("View error:", err);
+      alert("Unable to open document");
+    }
+  };
+
+
+
+  // rename
+  const renameNgoDocument = async (id, currentName) => {
+    const newName = prompt("Enter new document name:", currentName);
+    if (!newName || newName === currentName) return;
+
+    try {
+      const res = await fetch("http://localhost:3000/rename-ngo-document", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          newName,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      fetchNgoDocuments();
+    } catch (err) {
+      console.error("Rename error:", err);
+      alert("Failed to rename document");
+    }
+  };
+
+
+  // delete
+  const deleteNgoDocument = async (id, filePath) => {
+    if (!confirm("Delete this document?")) return;
+
+    try {
+      const res = await fetch("http://localhost:3000/delete-ngo-document", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, filePath }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      fetchNgoDocuments();
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert("Failed to delete document");
+    }
+  };
+
+
+
   // ---------------- RENDER ----------------
   return (
     <div className="min-h-screen bg-background">
@@ -384,12 +567,13 @@ const NGODashboard = () => {
       {/* MAIN CONTENT */}
       <div className="container mx-auto px-4 py-8">
         <Tabs defaultValue="profile" className="space-y-8">
-          <TabsList className="grid w-full max-w-3xl mx-auto grid-cols-5 rounded-full">
+          <TabsList className="grid w-full max-w-3xl mx-auto grid-cols-6 rounded-full">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="doctors">Doctors</TabsTrigger>
             <TabsTrigger value="patients">Patients</TabsTrigger>
             <TabsTrigger value="messages">Messages</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
           </TabsList>
 
           {/* ---------------- PROFILE ---------------- */}
@@ -846,6 +1030,147 @@ const NGODashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Documents */}
+          <TabsContent value="documents" className="space-y-6">
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle>NGO Documents</CardTitle>
+                <CardDescription>
+                  Upload your NGO stamp/seal and other verification documents
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-8">
+                {/* ---------------- STAMP SECTION ---------------- */}
+                <div>
+                  <h3 className="font-semibold mb-3">
+                    NGO Stamp / Seal <span className="text-red-500">*</span>
+                  </h3>
+
+                  {!stamp ? (
+                    <div
+                      className="border-2 border-dashed border-primary/30 rounded-xl p-10 text-center hover:bg-primary/5 cursor-pointer"
+                      onClick={() => document.getElementById("ngoStampInput").click()}
+                    >
+                      <input
+                        type="file"
+                        id="ngoStampInput"
+                        className="hidden"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={(e) =>
+                          uploadNgoDocument(e.target.files[0], "STAMP")
+                        }
+                      />
+                      <Upload className="w-10 h-10 mx-auto text-primary mb-3" />
+                      <h4 className="font-semibold">Upload NGO Stamp</h4>
+                      <p className="text-sm text-muted-foreground">Mandatory</p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between border rounded-lg p-4">
+                      <p className="font-medium">{stamp.document_name}</p>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => viewNgoDocument(stamp.file_path)}>
+                          View
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            renameNgoDocument(stamp.id, stamp.document_name)
+                          }
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <button
+                          size="icon"
+                          onClick={() =>
+                            deleteNgoDocument(stamp.id, stamp.file_path)
+                          }
+                        >
+                          <Trash2 />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <hr />
+
+                {/* ---------------- OTHER DOCUMENTS ---------------- */}
+                <div>
+                  <h3 className="font-semibold mb-3">Other Documents</h3>
+
+                  <div
+                    className="border-2 border-dashed border-primary/30 rounded-xl p-10 text-center hover:bg-primary/5 cursor-pointer mb-4"
+                    onClick={() => document.getElementById("ngoOtherInput").click()}
+                  >
+                    <input
+                      type="file"
+                      id="ngoOtherInput"
+                      className="hidden"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={(e) =>
+                        uploadNgoDocument(e.target.files[0], "OTHER")
+                      }
+                    />
+                    <Upload className="w-10 h-10 mx-auto text-primary mb-3" />
+                    <h4 className="font-semibold">Upload Document</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Certificates, ID proof, etc.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    {otherDocs.length === 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        No additional documents uploaded.
+                      </p>
+                    )}
+
+                    {otherDocs.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="flex items-center justify-between border rounded-lg p-3"
+                      >
+                        <p className="font-medium">{doc.document_name}</p>
+
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => viewNgoDocument(doc.file_path)}
+                          >
+                            View
+                          </Button>
+
+                          <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            renameNgoDocument(stamp.id, stamp.document_name)
+                          }
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+
+                          <button
+                            size="icon"
+                            onClick={() =>
+                              deleteNgoDocument(doc.id, doc.file_path)
+                            }
+                          >
+                            <Trash2 />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+
         </Tabs>
       </div>
 

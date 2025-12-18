@@ -19,7 +19,8 @@ import {
   Building2,
   Trash2,
   FileText,
-  Upload
+  Upload,
+  Pencil
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -46,6 +47,9 @@ const DoctorDashboard = () => {
   // supabase
   const [stamp, setStamp] = useState(null);
   const [otherDocs, setOtherDocs] = useState([]);
+  const [editingDocId, setEditingDocId] = useState(null);
+  const [editedName, setEditedName] = useState("");
+
   const doctorUid = auth.currentUser?.uid;
 
 
@@ -370,6 +374,41 @@ const DoctorDashboard = () => {
       alert("Failed to view document");
     }
   };
+
+  // ---------------- RENAME DOCTOR DOCUMENT ----------------
+  const renameDoctorDocument = async (id, currentName) => {
+  if (!id) {
+    console.error("Rename failed: document id missing");
+    return;
+  }
+
+  const newName = prompt("Enter new document name", currentName);
+  if (!newName || newName.trim() === currentName) return;
+
+  try {
+    const res = await fetch("http://localhost:3000/rename-doctor-document", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id,
+        newName: newName.trim(),
+      }),
+    });
+
+    const result = await res.json();
+
+    if (!res.ok || result.error) {
+      throw new Error(result.error || "Rename failed");
+    }
+
+    fetchDoctorDocuments();
+  } catch (err) {
+    console.error("Rename error:", err);
+    alert(err.message || "Failed to rename document");
+  }
+};
+
+
 
   // ---------------- DELETE DOCTOR DOCUMENT ----------------
   const deleteDoctorDocument = async (id, filePath) => {
@@ -788,7 +827,7 @@ const DoctorDashboard = () => {
               </CardHeader>
 
               <CardContent className="space-y-8">
-                {/* ---------------- STAMP SECTION ---------------- */}
+                {/* ================= STAMP SECTION ================= */}
                 <div>
                   <h3 className="font-semibold mb-3">
                     Doctor Stamp / Seal <span className="text-red-500">*</span>
@@ -815,17 +854,30 @@ const DoctorDashboard = () => {
                   ) : (
                     <div className="flex items-center justify-between border rounded-lg p-4">
                       <p className="font-medium">{stamp.document_name}</p>
+
                       <div className="flex gap-2">
                         <Button size="sm" onClick={() => viewDoctorDocument(stamp.file_path)}>
                           View
                         </Button>
+
                         <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => deleteDoctorDocument(stamp.id, stamp.file_path)}
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            renameDoctorDocument(stamp.id, stamp.document_name)
+                          }
                         >
-                          <Trash2 className="w-4 h-4 text-red-500" />
+                          <Pencil className="w-4 h-4" />
                         </Button>
+
+                        <button
+                          size="icon"
+                          onClick={() =>
+                            deleteDoctorDocument(stamp.id, stamp.file_path)
+                          }
+                        >
+                          <Trash2 />
+                        </button>
                       </div>
                     </div>
                   )}
@@ -833,7 +885,7 @@ const DoctorDashboard = () => {
 
                 <hr />
 
-                {/* ---------------- OTHER DOCUMENTS ---------------- */}
+                {/* ================= OTHER DOCUMENTS ================= */}
                 <div>
                   <h3 className="font-semibold mb-3">Other Documents</h3>
 
@@ -855,14 +907,13 @@ const DoctorDashboard = () => {
                     </p>
                   </div>
 
-                  {/* Uploaded Other Documents */}
-                  <div className="space-y-3">
-                    {otherDocs.length === 0 && (
-                      <p className="text-sm text-muted-foreground">
-                        No additional documents uploaded.
-                      </p>
-                    )}
+                  {otherDocs.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      No additional documents uploaded.
+                    </p>
+                  )}
 
+                  <div className="space-y-3">
                     {otherDocs.map((doc) => (
                       <div
                         key={doc.id}
@@ -876,12 +927,24 @@ const DoctorDashboard = () => {
                           </Button>
 
                           <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => deleteDoctorDocument(doc.id, doc.file_path)}
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              renameDoctorDocument(doc.id, doc.document_name)
+                            }
                           >
-                            <Trash2 className="w-4 h-4 text-red-500" />
+                            <Pencil className="w-4 h-4" />
                           </Button>
+
+
+                          <button
+                            size="icon"
+                            onClick={() =>
+                              deleteDoctorDocument(doc.id, doc.file_path)
+                            }
+                          >
+                            <Trash2 />
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -890,6 +953,7 @@ const DoctorDashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
 
         </Tabs>
       </div>
