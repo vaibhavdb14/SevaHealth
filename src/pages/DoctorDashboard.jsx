@@ -88,7 +88,7 @@ const DoctorDashboard = () => {
   const [scheduleData, setScheduleData] = useState({
     mode: "online",
     scheduledTime: "",
-    contactNumber: "",
+    // contactNumber: "",
   });
 
   // Fetch Doctor Details
@@ -256,15 +256,25 @@ const DoctorDashboard = () => {
       return;
     }
 
+
     await updateDoc(ref, {
       status: "accepted",
       mode: scheduleData.mode,
       scheduledTime: scheduleData.scheduledTime.trim(),
-      contactNumber: scheduleData.contactNumber.trim() || null,
+      callRoomId: `consult_${selectedConsultation.id}`,
+      chatEnabled: true,
       updatedAt: serverTimestamp(),
     });
 
-    setIsConsultModalOpen(false);
+    // await updateDoc(ref, {
+    //   status: "accepted",
+    //   mode: scheduleData.mode,
+    //   scheduledTime: scheduleData.scheduledTime.trim(),
+    //   contactNumber: scheduleData.contactNumber.trim() || null,
+    //   updatedAt: serverTimestamp(),
+    // });
+
+    // setIsConsultModalOpen(false);
   };
 
   // Doctor decision for NGO chat
@@ -377,36 +387,36 @@ const DoctorDashboard = () => {
 
   // ---------------- RENAME DOCTOR DOCUMENT ----------------
   const renameDoctorDocument = async (id, currentName) => {
-  if (!id) {
-    console.error("Rename failed: document id missing");
-    return;
-  }
-
-  const newName = prompt("Enter new document name", currentName);
-  if (!newName || newName.trim() === currentName) return;
-
-  try {
-    const res = await fetch("http://localhost:3000/rename-doctor-document", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id,
-        newName: newName.trim(),
-      }),
-    });
-
-    const result = await res.json();
-
-    if (!res.ok || result.error) {
-      throw new Error(result.error || "Rename failed");
+    if (!id) {
+      console.error("Rename failed: document id missing");
+      return;
     }
 
-    fetchDoctorDocuments();
-  } catch (err) {
-    console.error("Rename error:", err);
-    alert(err.message || "Failed to rename document");
-  }
-};
+    const newName = prompt("Enter new document name", currentName);
+    if (!newName || newName.trim() === currentName) return;
+
+    try {
+      const res = await fetch("http://localhost:3000/rename-doctor-document", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          newName: newName.trim(),
+        }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok || result.error) {
+        throw new Error(result.error || "Rename failed");
+      }
+
+      fetchDoctorDocuments();
+    } catch (err) {
+      console.error("Rename error:", err);
+      alert(err.message || "Failed to rename document");
+    }
+  };
 
 
 
@@ -744,7 +754,7 @@ const DoctorDashboard = () => {
                     setScheduleData({
                       mode: c.mode || "online",
                       scheduledTime: c.scheduledTime || "",
-                      contactNumber: c.contactNumber || "",
+                      // contactNumber: c.contactNumber || "",
                     });
                     setIsConsultModalOpen(true);
                   }}
@@ -1086,6 +1096,7 @@ const DoctorDashboard = () => {
             <DialogTitle>Consultation Request</DialogTitle>
           </DialogHeader>
 
+
           {selectedConsultation && (
             <div className="space-y-4 mt-2">
               <p className="text-sm text-muted-foreground">
@@ -1128,7 +1139,7 @@ const DoctorDashboard = () => {
                     }
                   />
 
-                  {scheduleData.mode === "online" && (
+                  {/* {scheduleData.mode === "online" && (
                     <Input
                       placeholder="Phone Number"
                       value={scheduleData.contactNumber}
@@ -1139,7 +1150,7 @@ const DoctorDashboard = () => {
                         })
                       }
                     />
-                  )}
+                  )} */}
 
                   <DialogFooter>
                     <Button

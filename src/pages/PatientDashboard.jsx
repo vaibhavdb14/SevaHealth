@@ -1165,26 +1165,6 @@ const PatientDashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
-
-          {/* <TabsContent value="reports" className="space-y-6">
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle>Upload Medical Reports</CardTitle>
-                <CardDescription>Share your documents</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div
-                  className="border-2 border-dashed border-primary/30 rounded-xl p-12 text-center hover:bg-primary/5 cursor-pointer"
-                  onClick={() => document.getElementById("fileInput").click()}
-                >
-                  <input type="file" id="fileInput" className="hidden" />
-                  <Upload className="w-12 h-12 mx-auto text-primary mb-4" />
-                  <h3 className="font-semibold mb-2">Upload Report</h3>
-                  <p className="text-sm text-muted-foreground">PDF, JPG, PNG</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent> */}
         </Tabs>
       </div>
 
@@ -1341,7 +1321,7 @@ const PatientDashboard = () => {
       </Dialog>
 
       {/* Chat history popup (read-only) */}
-      <Dialog open={isChatPopupOpen} onOpenChange={setIsChatPopupOpen}>
+      {/* <Dialog open={isChatPopupOpen} onOpenChange={setIsChatPopupOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Previous Consultation</DialogTitle>
@@ -1390,7 +1370,108 @@ const PatientDashboard = () => {
             </Button>
           </DialogFooter>
         </DialogContent>
+      </Dialog> */}
+
+
+      {/* Chat history popup (read-only) */}
+      <Dialog open={isChatPopupOpen} onOpenChange={setIsChatPopupOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Previous Consultation</DialogTitle>
+          </DialogHeader>
+
+          {chatData ? (
+            <div className="space-y-3">
+              {/* Problem */}
+              <p>
+                <strong>Problem:</strong> {chatData.initialDescription}
+              </p>
+
+              {/* Status */}
+              <p>
+                <strong>Status:</strong> {chatData.status}
+              </p>
+
+              {/* Accepted state */}
+              {chatData.status === "accepted" && (
+                <>
+                  <p>
+                    <strong>Mode:</strong>{" "}
+                    {chatData.mode || "Not specified"}
+                  </p>
+
+                  <p>
+                    <strong>Scheduled Time:</strong>{" "}
+                    {chatData.scheduledTime || "Not scheduled"}
+                  </p>
+
+                  <p>
+                    <strong>Doctor Location:</strong>{" "}
+                    {chatData.location || "Not provided"}
+                  </p>
+
+                  {/* Online consultation → Call button */}
+                  {chatData.mode === "online" && (
+                    <Button
+                      className="w-full mt-3 rounded-full"
+                      onClick={() =>
+                        navigate(`/call/${chatData.callRoomId || chatData.id}`)
+                      }
+                    >
+                      📞 Join Video Consultation
+                    </Button>
+                  )}
+
+                  {/* Prescription download */}
+                  {chatData.prescriptionPdfUrl && (
+                    <Button
+                      variant="outline"
+                      className="w-full mt-2 rounded-full"
+                      onClick={async () => {
+                        window.open(chatData.prescriptionPdfUrl, "_blank");
+
+                        // chat disable logic (important)
+                        await updateDoc(
+                          doc(db, "consultations", chatData.id),
+                          { chatEnabled: false }
+                        );
+                      }}
+                    >
+                      📄 Download Prescription
+                    </Button>
+                  )}
+                </>
+              )}
+
+              {/* Declined */}
+              {chatData.status === "declined" && (
+                <p className="text-red-600">
+                  Doctor declined this request.
+                </p>
+              )}
+
+              {/* Chat disabled message */}
+              {chatData.chatEnabled === false && (
+                <p className="text-sm text-muted-foreground text-center mt-3">
+                  Chat has been closed after prescription delivery.
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-muted-foreground">Loading...</p>
+          )}
+
+          <DialogFooter>
+            <Button
+              className="rounded-full"
+              onClick={() => setIsChatPopupOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
+
 
       {/* NGO Request Modal */}
       <Dialog open={isNGOModalOpen} onOpenChange={setIsNGOModalOpen}>
