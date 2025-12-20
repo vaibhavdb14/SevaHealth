@@ -20,7 +20,8 @@ import {
   Building2,
   Trash2,
   Edit,
-  FileText
+  FileText,
+  Pencil
 } from "lucide-react";
 
 import {
@@ -52,7 +53,6 @@ import RequiredDocumentsModal from '../components/RequiredDocumentsModal';
 
 // supabase
 import { supabase } from "../supabaseClient";
-import { Pencil } from "lucide-react";
 
 
 
@@ -1320,58 +1320,6 @@ const PatientDashboard = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Chat history popup (read-only) */}
-      {/* <Dialog open={isChatPopupOpen} onOpenChange={setIsChatPopupOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Previous Consultation</DialogTitle>
-          </DialogHeader>
-
-          {chatData ? (
-            <div className="space-y-3">
-              <p>
-                <strong>Problem:</strong> {chatData.initialDescription}
-              </p>
-              <p>
-                <strong>Status:</strong> {chatData.status}
-              </p>
-
-              {chatData.status === "accepted" && (
-                <>
-                  <p>
-                    <strong>Mode:</strong> {chatData.mode}
-                  </p>
-                  <p>
-                    <strong>Scheduled Time:</strong> {chatData.scheduledTime}
-                  </p>
-                  <p>
-                    <strong>Contact Number:</strong> {chatData.contactNumber}
-                  </p>
-                  <p>
-                    <strong>Doctor Location:</strong> {chatData.location}
-                  </p>
-                </>
-              )}
-
-              {chatData.status === "declined" && (
-                <p className="text-red-600">Doctor declined this request.</p>
-              )}
-            </div>
-          ) : (
-            <p className="text-muted-foreground">Loading...</p>
-          )}
-
-          <DialogFooter>
-            <Button
-              className="rounded-full"
-              onClick={() => setIsChatPopupOpen(false)}
-            >
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog> */}
-
 
       {/* Chat history popup (read-only) */}
       <Dialog open={isChatPopupOpen} onOpenChange={setIsChatPopupOpen}>
@@ -1409,37 +1357,6 @@ const PatientDashboard = () => {
                     <strong>Doctor Location:</strong>{" "}
                     {chatData.location || "Not provided"}
                   </p>
-
-                  {/* Online consultation → Call button */}
-                  {chatData.mode === "online" && (
-                    <Button
-                      className="w-full mt-3 rounded-full"
-                      onClick={() =>
-                        navigate(`/call/${chatData.callRoomId || chatData.id}`)
-                      }
-                    >
-                      📞 Join Video Consultation
-                    </Button>
-                  )}
-
-                  {/* Prescription download */}
-                  {chatData.prescriptionPdfUrl && (
-                    <Button
-                      variant="outline"
-                      className="w-full mt-2 rounded-full"
-                      onClick={async () => {
-                        window.open(chatData.prescriptionPdfUrl, "_blank");
-
-                        // chat disable logic (important)
-                        await updateDoc(
-                          doc(db, "consultations", chatData.id),
-                          { chatEnabled: false }
-                        );
-                      }}
-                    >
-                      📄 Download Prescription
-                    </Button>
-                  )}
                 </>
               )}
 
@@ -1447,13 +1364,6 @@ const PatientDashboard = () => {
               {chatData.status === "declined" && (
                 <p className="text-red-600">
                   Doctor declined this request.
-                </p>
-              )}
-
-              {/* Chat disabled message */}
-              {chatData.chatEnabled === false && (
-                <p className="text-sm text-muted-foreground text-center mt-3">
-                  Chat has been closed after prescription delivery.
                 </p>
               )}
             </div>
@@ -1523,6 +1433,7 @@ const PatientDashboard = () => {
           )}
         </DialogContent>
       </Dialog>
+      
       {/* View NGO Request Popup */}
       <Dialog open={isNGOViewPopupOpen} onOpenChange={setIsNGOViewPopupOpen}>
         <DialogContent className="max-w-lg">

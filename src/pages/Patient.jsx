@@ -20,7 +20,8 @@ import {
   Building2,
   Trash2,
   Edit,
-  FileText
+  FileText,
+  Pencil
 } from "lucide-react";
 
 import {
@@ -52,7 +53,6 @@ import RequiredDocumentsModal from '../components/RequiredDocumentsModal';
 
 // supabase
 import { supabase } from "../supabaseClient";
-import { Pencil } from "lucide-react";
 
 
 
@@ -1165,26 +1165,6 @@ const PatientDashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
-
-          {/* <TabsContent value="reports" className="space-y-6">
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle>Upload Medical Reports</CardTitle>
-                <CardDescription>Share your documents</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div
-                  className="border-2 border-dashed border-primary/30 rounded-xl p-12 text-center hover:bg-primary/5 cursor-pointer"
-                  onClick={() => document.getElementById("fileInput").click()}
-                >
-                  <input type="file" id="fileInput" className="hidden" />
-                  <Upload className="w-12 h-12 mx-auto text-primary mb-4" />
-                  <h3 className="font-semibold mb-2">Upload Report</h3>
-                  <p className="text-sm text-muted-foreground">PDF, JPG, PNG</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent> */}
         </Tabs>
       </div>
 
@@ -1340,6 +1320,7 @@ const PatientDashboard = () => {
         </DialogContent>
       </Dialog>
 
+
       {/* Chat history popup (read-only) */}
       <Dialog open={isChatPopupOpen} onOpenChange={setIsChatPopupOpen}>
         <DialogContent className="max-w-lg">
@@ -1349,32 +1330,41 @@ const PatientDashboard = () => {
 
           {chatData ? (
             <div className="space-y-3">
+              {/* Problem */}
               <p>
                 <strong>Problem:</strong> {chatData.initialDescription}
               </p>
+
+              {/* Status */}
               <p>
                 <strong>Status:</strong> {chatData.status}
               </p>
 
+              {/* Accepted state */}
               {chatData.status === "accepted" && (
                 <>
                   <p>
-                    <strong>Mode:</strong> {chatData.mode}
+                    <strong>Mode:</strong>{" "}
+                    {chatData.mode || "Not specified"}
                   </p>
+
                   <p>
-                    <strong>Scheduled Time:</strong> {chatData.scheduledTime}
+                    <strong>Scheduled Time:</strong>{" "}
+                    {chatData.scheduledTime || "Not scheduled"}
                   </p>
+
                   <p>
-                    <strong>Contact Number:</strong> {chatData.contactNumber}
-                  </p>
-                  <p>
-                    <strong>Doctor Location:</strong> {chatData.location}
+                    <strong>Doctor Location:</strong>{" "}
+                    {chatData.location || "Not provided"}
                   </p>
                 </>
               )}
 
+              {/* Declined */}
               {chatData.status === "declined" && (
-                <p className="text-red-600">Doctor declined this request.</p>
+                <p className="text-red-600">
+                  Doctor declined this request.
+                </p>
               )}
             </div>
           ) : (
@@ -1391,6 +1381,7 @@ const PatientDashboard = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
 
       {/* NGO Request Modal */}
       <Dialog open={isNGOModalOpen} onOpenChange={setIsNGOModalOpen}>
@@ -1442,6 +1433,7 @@ const PatientDashboard = () => {
           )}
         </DialogContent>
       </Dialog>
+      
       {/* View NGO Request Popup */}
       <Dialog open={isNGOViewPopupOpen} onOpenChange={setIsNGOViewPopupOpen}>
         <DialogContent className="max-w-lg">

@@ -430,37 +430,6 @@ const NGODashboard = () => {
   }
 };
 
-  // const uploadNgoDocument = async (file, type) => {
-  //   if (!file) return;
-
-  //   try {
-  //     setUploading(true);
-
-  //     const formData = new FormData();
-  //     formData.append("document", file);
-  //     formData.append("documentType", type);
-  //     formData.append("ngoUid", ngoUid);
-
-  //     const res = await fetch("http://localhost:3000/upload-ngo-document", {
-  //       method: "POST",
-  //       body: formData,
-  //     });
-
-  //     const text = await res.text();
-  //     const data = JSON.parse(text);
-
-  //     if (!res.ok) throw new Error(data.error);
-
-  //     fetchNgoDocuments();
-  //   } catch (err) {
-  //     console.error("Upload error:", err);
-  //     alert("Failed to upload document");
-  //   } finally {
-  //     setUploading(false);
-  //   }
-  // };
-
-
 
   // // view
   const viewNgoDocument = async (filePath) => {
@@ -567,9 +536,9 @@ const NGODashboard = () => {
       {/* MAIN CONTENT */}
       <div className="container mx-auto px-4 py-8">
         <Tabs defaultValue="profile" className="space-y-8">
-          <TabsList className="grid w-full max-w-3xl mx-auto grid-cols-6 rounded-full">
+          <TabsList className="grid w-full max-w-3xl mx-auto grid-cols-5 rounded-full">
             <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            {/* <TabsTrigger value="camps">Camps</TabsTrigger> */}
             <TabsTrigger value="doctors">Doctors</TabsTrigger>
             <TabsTrigger value="patients">Patients</TabsTrigger>
             <TabsTrigger value="messages">Messages</TabsTrigger>
@@ -646,6 +615,50 @@ const NGODashboard = () => {
                 )}
               </CardContent>
             </Card>
+
+            <div className="grid md:grid-cols-3 gap-6">
+              <Card>
+                <CardContent className="pt-6 flex items-center gap-4">
+                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                    <Users />
+                  </div>
+                  <div>
+                    <p className="text-3xl font-bold text-primary">1,245</p>
+                    <p className="text-sm text-muted-foreground">
+                      Total Patients Served
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-6 flex items-center gap-4">
+                  <div className="w-12 h-12 bg-secondary/10 rounded-full flex items-center justify-center">
+                    <BarChart3 />
+                  </div>
+                  <div>
+                    <p className="text-3xl font-bold text-primary">87</p>
+                    <p className="text-sm text-muted-foreground">
+                      Ongoing Cases
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-6 flex items-center gap-4">
+                  <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center">
+                    <UserCircle />
+                  </div>
+                  <div>
+                    <p className="text-3xl font-bold text-primary">34</p>
+                    <p className="text-sm text-muted-foreground">
+                      Doctor Collaborations
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
           {/* for documents checklist */}
           <RequiredDocumentsModal
@@ -766,8 +779,8 @@ const NGODashboard = () => {
           )}
 
           {/* ---------------- ANALYTICS ---------------- */}
-          <TabsContent value="analytics" className="space-y-6">
-            <div className="grid md:grid-cols-3 gap-6">
+          {/* <TabsContent value="camps" className="space-y-6"> */}
+            {/* <div className="grid md:grid-cols-3 gap-6">
               <Card>
                 <CardContent className="pt-6 flex items-center gap-4">
                   <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
@@ -809,8 +822,8 @@ const NGODashboard = () => {
                   </div>
                 </CardContent>
               </Card>
-            </div>
-          </TabsContent>
+            </div> */}
+          {/* </TabsContent> */}
 
           {/* ---------------- DOCTORS (dynamic + filters) ---------------- */}
           <TabsContent value="doctors" className="space-y-6">
