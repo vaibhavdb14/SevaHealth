@@ -18,7 +18,9 @@ import {
   Edit,
   Building2,
   Trash2,
-  FileText
+  FileText,
+  Upload,
+  Pencil
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -41,6 +43,16 @@ import { serverTimestamp } from "firebase/firestore";
 import RequiredDocumentsModal from '../components/RequiredDocumentsModal';
 
 const DoctorDashboard = () => {
+
+  // supabase
+  const [stamp, setStamp] = useState(null);
+  const [otherDocs, setOtherDocs] = useState([]);
+  const [editingDocId, setEditingDocId] = useState(null);
+  const [editedName, setEditedName] = useState("");
+
+  const doctorUid = auth.currentUser?.uid;
+
+
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [doctorData, setDoctorData] = useState(null);
@@ -76,7 +88,7 @@ const DoctorDashboard = () => {
   const [scheduleData, setScheduleData] = useState({
     mode: "online",
     scheduledTime: "",
-    contactNumber: "",
+    // contactNumber: "",
   });
 
   // Fetch Doctor Details
@@ -244,15 +256,25 @@ const DoctorDashboard = () => {
       return;
     }
 
+
     await updateDoc(ref, {
       status: "accepted",
       mode: scheduleData.mode,
       scheduledTime: scheduleData.scheduledTime.trim(),
-      contactNumber: scheduleData.contactNumber.trim() || null,
+      callRoomId: `consult_${selectedConsultation.id}`,
+      chatEnabled: true,
       updatedAt: serverTimestamp(),
     });
 
-    setIsConsultModalOpen(false);
+    // await updateDoc(ref, {
+    //   status: "accepted",
+    //   mode: scheduleData.mode,
+    //   scheduledTime: scheduleData.scheduledTime.trim(),
+    //   contactNumber: scheduleData.contactNumber.trim() || null,
+    //   updatedAt: serverTimestamp(),
+    // });
+
+    // setIsConsultModalOpen(false);
   };
 
   // Doctor decision for NGO chat
@@ -284,6 +306,141 @@ const DoctorDashboard = () => {
     });
 
     setIsNgoChatModalOpen(false);
+  };
+
+  // supabase
+  // useEffect(() => {
+  //   if (doctorUid) fetchDocuments();
+  // }, [doctorUid]);
+
+  // ---------------- FETCH DOCTOR DOCUMENTS ----------------
+  const fetchDoctorDocuments = async () => {
+    try {
+      const res = await fetch(
+        `http://localhost:3000/get-doctor-documents?doctorUid=${doctorUid}`
+      );
+      const data = await res.json();
+
+      if (!Array.isArray(data)) {
+        console.error("Invalid response from backend", data);
+        return;
+      }
+
+      setStamp(data.find((d) => d.document_type === "STAMP") || null);
+      setOtherDocs(data.filter((d) => d.document_type === "OTHER") || []);
+    } catch (err) {
+      console.error("Failed to fetch doctor documents:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchDoctorDocuments();
+  }, []);
+
+  // ---------------- UPLOAD DOCTOR DOCUMENT ----------------
+  const uploadDoc = async (file, type) => {
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("doctorUid", doctorUid);
+    formData.append("documentType", type);
+
+    try {
+      const res = await fetch("http://localhost:3000/upload-doctor-document", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await res.json();
+
+      if (!res.ok || result.error) {
+        throw new Error(result.error || "Upload failed");
+      }
+
+      alert(`${type} document uploaded successfully!`);
+      fetchDoctorDocuments(); // refresh documents
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Failed to upload document");
+    }
+  };
+
+  // ---------------- VIEW DOCTOR DOCUMENT ----------------
+  const viewDoctorDocument = async (filePath) => {
+    try {
+      if (!filePath) return;
+
+      const res = await fetch(
+        `http://localhost:3000/get-doctor-signed-url?filePath=${encodeURIComponent(
+          filePath
+        )}`
+      );
+      const result = await res.json();
+
+      if (!res.ok || result.error) throw new Error(result.error || "Failed");
+      window.open(result.signedUrl, "_blank");
+    } catch (err) {
+      console.error("View document error:", err);
+      alert("Failed to view document");
+    }
+  };
+
+  // ---------------- RENAME DOCTOR DOCUMENT ----------------
+  const renameDoctorDocument = async (id, currentName) => {
+    if (!id) {
+      console.error("Rename failed: document id missing");
+      return;
+    }
+
+    const newName = prompt("Enter new document name", currentName);
+    if (!newName || newName.trim() === currentName) return;
+
+    try {
+      const res = await fetch("http://localhost:3000/rename-doctor-document", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          newName: newName.trim(),
+        }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok || result.error) {
+        throw new Error(result.error || "Rename failed");
+      }
+
+      fetchDoctorDocuments();
+    } catch (err) {
+      console.error("Rename error:", err);
+      alert(err.message || "Failed to rename document");
+    }
+  };
+
+
+
+  // ---------------- DELETE DOCTOR DOCUMENT ----------------
+  const deleteDoctorDocument = async (id, filePath) => {
+    if (!window.confirm("Are you sure you want to delete this document?"))
+      return;
+
+    try {
+      const res = await fetch("http://localhost:3000/delete-doctor-document", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, filePath }),
+      });
+
+      const result = await res.json();
+      if (!res.ok || result.error) throw new Error(result.error || "Delete failed");
+
+      alert("Document deleted successfully");
+      fetchDoctorDocuments();
+    } catch (err) {
+      console.error("Delete document error:", err);
+      alert("Failed to delete document");
+    }
   };
 
   return (
@@ -318,7 +475,7 @@ const DoctorDashboard = () => {
 
       <div className="container mx-auto px-4 py-8">
         <Tabs defaultValue="profile" className="space-y-8">
-          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-4 rounded-full">
+          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-5 rounded-full">
             <TabsTrigger value="profile" className="rounded-full">
               Profile
             </TabsTrigger>
@@ -330,6 +487,9 @@ const DoctorDashboard = () => {
             </TabsTrigger>
             <TabsTrigger value="ngo-messages" className="rounded-full">
               NGO Messages
+            </TabsTrigger>
+            <TabsTrigger value="my-documents" className="rounded-full">
+              My Documents
             </TabsTrigger>
           </TabsList>
 
@@ -594,7 +754,7 @@ const DoctorDashboard = () => {
                     setScheduleData({
                       mode: c.mode || "online",
                       scheduledTime: c.scheduledTime || "",
-                      contactNumber: c.contactNumber || "",
+                      // contactNumber: c.contactNumber || "",
                     });
                     setIsConsultModalOpen(true);
                   }}
@@ -665,6 +825,146 @@ const DoctorDashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* My Documents */}
+          <TabsContent value="my-documents" className="space-y-6">
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle>Doctor Documents</CardTitle>
+                <CardDescription>
+                  Upload your stamp/seal and other professional documents
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-8">
+                {/* ================= STAMP SECTION ================= */}
+                <div>
+                  <h3 className="font-semibold mb-3">
+                    Doctor Stamp / Seal <span className="text-red-500">*</span>
+                  </h3>
+
+                  {!stamp ? (
+                    <div
+                      className="border-2 border-dashed border-primary/30 rounded-xl p-10 text-center hover:bg-primary/5 cursor-pointer"
+                      onClick={() => document.getElementById("stampInput").click()}
+                    >
+                      <input
+                        type="file"
+                        id="stampInput"
+                        className="hidden"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={(e) => uploadDoc(e.target.files[0], "STAMP")}
+                      />
+                      <Upload className="w-10 h-10 mx-auto text-primary mb-3" />
+                      <h4 className="font-semibold">Upload Doctor Stamp</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Mandatory for prescriptions
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between border rounded-lg p-4">
+                      <p className="font-medium">{stamp.document_name}</p>
+
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => viewDoctorDocument(stamp.file_path)}>
+                          View
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            renameDoctorDocument(stamp.id, stamp.document_name)
+                          }
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+
+                        <button
+                          size="icon"
+                          onClick={() =>
+                            deleteDoctorDocument(stamp.id, stamp.file_path)
+                          }
+                        >
+                          <Trash2 />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <hr />
+
+                {/* ================= OTHER DOCUMENTS ================= */}
+                <div>
+                  <h3 className="font-semibold mb-3">Other Documents</h3>
+
+                  <div
+                    className="border-2 border-dashed border-primary/30 rounded-xl p-10 text-center hover:bg-primary/5 cursor-pointer mb-4"
+                    onClick={() => document.getElementById("otherDocInput").click()}
+                  >
+                    <input
+                      type="file"
+                      id="otherDocInput"
+                      className="hidden"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={(e) => uploadDoc(e.target.files[0], "OTHER")}
+                    />
+                    <Upload className="w-10 h-10 mx-auto text-primary mb-3" />
+                    <h4 className="font-semibold">Upload Document</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Certificates, ID proof, etc.
+                    </p>
+                  </div>
+
+                  {otherDocs.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      No additional documents uploaded.
+                    </p>
+                  )}
+
+                  <div className="space-y-3">
+                    {otherDocs.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="flex items-center justify-between border rounded-lg p-3"
+                      >
+                        <p className="font-medium">{doc.document_name}</p>
+
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => viewDoctorDocument(doc.file_path)}>
+                            View
+                          </Button>
+
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              renameDoctorDocument(doc.id, doc.document_name)
+                            }
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+
+
+                          <button
+                            size="icon"
+                            onClick={() =>
+                              deleteDoctorDocument(doc.id, doc.file_path)
+                            }
+                          >
+                            <Trash2 />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+
         </Tabs>
       </div>
 
@@ -796,6 +1096,7 @@ const DoctorDashboard = () => {
             <DialogTitle>Consultation Request</DialogTitle>
           </DialogHeader>
 
+
           {selectedConsultation && (
             <div className="space-y-4 mt-2">
               <p className="text-sm text-muted-foreground">
@@ -838,7 +1139,7 @@ const DoctorDashboard = () => {
                     }
                   />
 
-                  {scheduleData.mode === "online" && (
+                  {/* {scheduleData.mode === "online" && (
                     <Input
                       placeholder="Phone Number"
                       value={scheduleData.contactNumber}
@@ -849,7 +1150,7 @@ const DoctorDashboard = () => {
                         })
                       }
                     />
-                  )}
+                  )} */}
 
                   <DialogFooter>
                     <Button
